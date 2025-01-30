@@ -1,0 +1,3 @@
+include assistentegui/ui/main.qml
+include assistentegui/ui/breath_round.gif
+

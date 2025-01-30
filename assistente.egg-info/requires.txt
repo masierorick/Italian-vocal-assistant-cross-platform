@@ -1,0 +1,12 @@
+beautifulsoup4>=4.12.3
+groq>=0.13.1
+gTTS>=2.5.4
+jsonpath_ng>=1.7.0
+playsound>=1.3.0
+pyradio>=0.5.2
+PySide6>=6.8.0.2
+PySide6_Addons>=6.8.1
+PySide6_Essentials>=6.8.1
+python-dotenv>=1.0.1
+radio>=0.1.3
+SpeechRecognition>=3.11.0
