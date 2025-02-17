@@ -2,6 +2,7 @@ from setuptools import setup, find_packages
 from setuptools.command.install import install
 import os
 import shutil
+import subprocess
 
 class PostInstallCommand(install):
     """Comando personalizzato per installare il file .desktop dopo l'installazione."""
@@ -24,12 +25,28 @@ class PostInstallCommand(install):
         shutil.copy(source_file, applications_dir)
         print("File .desktop installati con successo!")
 
+def install_portaudio():
+    """Installa automaticamente PortAudio prima di installare i pacchetti Python"""
+    try:
+        if sys.platform.startswith("linux"):
+            subprocess.run(["sudo", "apt", "install", "-y", "portaudio19-dev"], check=True)
+        elif sys.platform == "darwin":  # macOS
+            subprocess.run(["brew", "install", "portaudio"], check=True)
+        elif sys.platform == "win32":
+            print("⚠️ Su Windows, installa PortAudio manualmente da http://www.portaudio.com/download.html")
+    except Exception as e:
+        print(f"Errore durante l'installazione di PortAudio: {e}")
+
+# Installare PortAudio prima di procedere con l'installazione delle dipendenze Python
+install_portaudio()
+
+
 setup(
-    name="assistente",
-    version="1.0.0",
+    name="Assistente",
+    version="2.5.0",
     author="Masiero Riccardo",
     author_email="masierorick@gmail.com",
-    description="assistente vocale per neon kde",
+    description="assistente vocale in italiano",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/tuo_account/my_project",
@@ -41,23 +58,26 @@ setup(
               "ui/*.qml",
               "data/*.*",
               "data/*.csv",
-              "script/.env"
+              "script/.env",
+              "config/*.json"
             ],
 
     },
     install_requires=[ # Specifica le dipendenze
-        "beautifulsoup4>=4.12.3",
-        "groq>=0.13.1",
+        "comtypes>=1.4.9",
+        "google_api_python_client>=2.154.0",
+        "groq>=0.18.0",
+        "openai>=1.61.0",
         "gTTS>=2.5.4",
-        "jsonpath_ng>=1.7.0",
         "playsound>=1.3.0",
-        "pyradio>=0.5.2",
         "PySide6>=6.8.0.2",
         "PySide6_Addons>=6.8.1",
         "PySide6_Essentials>=6.8.1",
         "python-dotenv>=1.0.1",
-        "radio>=0.1.3",
+        "setuptools>=75.6.0",
         "SpeechRecognition>=3.11.0",
+        "pyproject-toml==0.1.0",
+        "PyAudio>=0.2.14",
 
     ],
     cmdclass={

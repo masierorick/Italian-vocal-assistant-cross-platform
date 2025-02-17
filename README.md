@@ -1,6 +1,7 @@
 Programma di assistente vocale - AI in italiano.
 
 Il programma ha l'obiettivo di fornire supporto vocale su Linux (provato con ambiente grafico KDE).
+In futuro si cercherà di renderlo cross-platform.
 E' dotato di animazione grafica che permette di capire quando l'assistente è pronto per ricevere programmi (il nome dell'assistente diventa di color rosso), diversamente stà in attesa di riconoscere la voce di attivazione (nello specifico corrisponde al nome evidenziato sopra l'animazione grafica.)
 E' possibile posizionare l'animazione dove di preferisce all'interno dello schermo.
 Per chiudere l'appicazione è sufficiente dire "esci dal programma" o premere con il tasto destro del mouse sopra l'animazione.
@@ -12,3 +13,5 @@ E' possibile verificare quali stazioni radio sono impostate chiedendo la "lista 
 L'elenco delle webradio può essere modificato agendo sul file stations.csv contenuto nella directory "data".
 Ultima funzione disponibile è la possibilità di effettuare una ricerca o un calcolo matematico sfruttando l'IA fornita da Groq .(Per questo serve una API key fornita da Groq da inserire all'interno del file .env (da allocare nella directory "script") con parametro API_KEY = ..... e la chiave fornita da Groq )
 L'uso della IA si attiva automaticamente con i comandi "cerca" o "calcola".
+Con la versione 2.4 e' stata integrata la possibilità di cercare video su youtube con il comando "cerca.... su Youtube".
+Anche in questo caso perchè il comando funzioni  occorre scaricare un API_KEY_YOTUBE da inserire nel file .env.

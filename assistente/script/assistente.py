@@ -1,28 +1,7 @@
 #Assistente vocale con python in italiano
 #2025 - Masiero Riccardo - tecnomas.engineering@gmail.com
 
-#versione 2.5.
-#Risolto problematica confusione linguistica con si e sistema nella funzione comrecon
-#Inserito azzeramento variabili riavvia,attivo e uscita nella funzione downtime_control
-#inserimento file messages_it.json nella directory config per separare i messagi e i comandi in italiano
-
-#versione 2.4.5
-#Inserita finestra qml con indicazione del log dei comandi recepiti
-#inserita gemini come ai
-
-#versione 2.4
-#inserita google api per ricerca su Youtube
-#inserito ricerca variabili configurazione da esterno
-
-# 2.3
-# Reso più compatto il codice con aggiunta di funzioni all'interno di comrecon
-#aggiunto più risposte alla listreplybot e listsaluti
-#corretto alcuni programmi che in italiano recepisce in modo diverso es. krita , konsole,kaffeine in apriProgrammi
-#miglioramenti nella gestione do apertura e chiusura dei programmi
-#inserito controllo volume
-#risolto bug su radio che impediva l'esecuzione di varie condizioni (eliminato elif)
-
-#occorre avere le seguenti librerie python installate
+#Librerie python necessarie per il funzionamento
 
 #pip install gtts
 #pip install playsound
@@ -48,6 +27,7 @@ import signal
 import json
 import csv
 import sys
+import platform
 import webbrowser
 import threading
 from threading import Thread
@@ -57,15 +37,15 @@ from pathlib import Path
 from gtts import gTTS
 from playsound import playsound
 from dotenv import load_dotenv
-from groq import Groq
 import speech_recognition as sr
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QObject,Slot,Signal
-#gli import seguente servono per gemini
-from googleapiclient.discovery import build
-import google.generativeai as genai
+#AI importate
+from groq import Groq
+from openai import OpenAI
+from googleapiclient.discovery import build #serve per youtube api
 
 load_dotenv()
 
@@ -80,6 +60,7 @@ messages_path = main_path / "config/messages_it.json"
 # Carica configurazione da file json
 with open(config_path, "r") as config_file:
     config = json.load(config_file)
+
 # Carica i messaggi dal file JSON
 with open(messages_path, "r", encoding="utf-8") as f:
     messages = json.load(f)
@@ -124,31 +105,35 @@ api_key_youtube = os.getenv("API_KEY_YOUTUBE") #legge api key di youtube dal fil
 youtube = build("youtube", "v3", developerKey=api_key_youtube)
 
 #Groq API
-client = Groq(api_key=os.getenv("API_KEY"))
+clientGroq = Groq(api_key=os.getenv("API_KEY"))
 
-#Gemini API
-apy_key_gemini = os.getenv("API_KEY_GEMINI")
+#Deepseek API
+clientDeepseek = OpenAI(
+  base_url="https://openrouter.ai/api/v1",
+  api_key=os.getenv("APY_KEY_DEEPSEEK")
+)
 
-genai.configure(api_key=apy_key_gemini)
-
-def genai_response(text):
-  try:
-     model = genai.GenerativeModel("gemini-pro")
-     response = model.generate_content(text)
-     return response.text
-
-  except Exception as e:
-        return f"Errore nella generazione del contenuto: {e}"
+def get_deepseek_response(text):
+  italian_prompt = f"Rispondi in italiano.\nTesto dell'utente: {text}"
+  response = clientDeepseek.chat.completions.create(
+     model="deepseek/deepseek-r1:free",
+     messages=[{"role": "user","content": italian_prompt}]
+  )
+  if response and hasattr(response, "choices") and response.choices:
+        return response.choices[0].message.content
+  return "Errore nella risposta dell'API."
 
 
 def get_groq_response(text):
     """Funzione per ottenere risposta da Groq AI."""
     italian_prompt = f"Rispondi in italiano.\nTesto dell'utente: {text}"
-    response = client.chat.completions.create(
-        model="llama3-8b-8192",
+    response = clientGroq.chat.completions.create(
+        model="Llama3-8b-8192",
         messages=[{"role": "user", "content": italian_prompt}]
     )
     return response.choices[0].message.content
+
+
 
 def cerca_youtube(query, max_risultati=5):
     # Cerca video su YouTube
@@ -171,16 +156,6 @@ def cerca_youtube(query, max_risultati=5):
         print(f"URL: {url}")
         print("-" * 40)
     return urls
-
-
-def generacomando(input_utente): #funziona ancora non attiva
-   #funzione per sviluppo ulteriore dei comandi tramite l'AI
-   prompt = f"Converti questo comando naturale in un comando per KDE Neon: {input_utente}"
-   response = client.chat.completions.create(
-        model="llama3-8b-8192",
-        messages=[{"role": "user", "content": prompt}]
-    )
-   return response.choices[0].text.strip()
 
 
 def speak(text):
@@ -282,7 +257,7 @@ def apriBookmarks(listabookmarks, comando):
 
 
 def apri_gestore_file(percorso="."):
-    # Apre il gestore file predefinito del sistema operativo nel percorso specificato.
+    # Apre il gestore file predefinito - già reso cross-platform
 
     try:
         if sys.platform.startswith("win"):  # Windows
@@ -452,20 +427,88 @@ def estraipid(pid1,pid2):
               #print (variabile, pid2)
 
 
-
 def setVolume(azione):
+   #inserita funzione cross-platform
     global deltavolume
-    if any(word in azione for word in ["aumenta", "alza"]):
-        os.system(f"pactl set-sink-volume @DEFAULT_SINK@ +{deltavolume}%")
-        print(messages["other_messages"]["volume_increased"].format(deltavolume=deltavolume))
-    elif any(word in azione for word in ["diminuisci", "abbassa"]):
-        os.system(f"pactl set-sink-volume @DEFAULT_SINK@ -{deltavolume}%")
-        print(messages["other_messages"]["volume_decreased"].format(deltavolume=deltavolume))
-    elif "silenzia" in azione:
-        os.system("pactl set-sink-mute @DEFAULT_SINK@ toggle")
-        print(messages["other_messages"]["volume_muted"])
+
+    if platform.system() == "Windows":
+     try:
+        from ctypes import cast, POINTER
+        from comtypes import CLSCTX_ALL
+        from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+     except ImportError:
+        print(messages["error_messages"]["program_not_found"].format(program="pycaw"))
+
+    system_platform = platform.system()
+
+    if system_platform == "Linux":
+        if any(word in azione for word in messages["commands"]["setvol"]):
+            percent = int(''.join(filter(str.isdigit, azione)))
+            os.system("pactl set-sink-mute @DEFAULT_SINK@ 0")  # Unmute
+            os.system(f"pactl set-sink-volume @DEFAULT_SINK@ {percent}%")
+            print(f"Volume impostato a {percent}%")
+        elif any(word in azione for word in messages["commands"]["upvol"]):
+            os.system("pactl set-sink-mute @DEFAULT_SINK@ 0")  # Unmute
+            os.system(f"pactl set-sink-volume @DEFAULT_SINK@ +{deltavolume}%")
+            print(messages["other_messages"]["volume_increased"].format(deltavolume=deltavolume))
+        elif any(word in azione for word in messages["commands"]["downvol"]):
+            os.system("pactl set-sink-mute @DEFAULT_SINK@ 0")  # Unmute
+            os.system(f"pactl set-sink-volume @DEFAULT_SINK@ -{deltavolume}%")
+            print(messages["other_messages"]["volume_decreased"].format(deltavolume=deltavolume))
+        elif any(word in azione for word in messages["commands"]["silent"]):
+            os.system("pactl set-sink-mute @DEFAULT_SINK@ toggle")
+            print(messages["other_messages"]["volume_muted"])
+        else:
+            print(messages["error_messages"]["command_not_recognized"])
+
+    elif system_platform == "Darwin":  # macOS
+        if any(word in azione for word in messages["commands"]["setvol"]):
+            percent = int(''.join(filter(str.isdigit, azione)))
+            os.system("osascript -e 'set volume output muted false'")  # Unmute
+            os.system(f"osascript -e 'set volume output volume {percent}'")
+            print(f"Volume impostato a {percent}%")
+        elif any(word in azione for word in messages["commands"]["upvol"]):
+            os.system("osascript -e 'set volume output muted false'")  # Unmute
+            os.system(f"osascript -e 'set volume output volume (output volume of (get volume settings) + {deltavolume})'")
+            print(messages["other_messages"]["volume_increased"].format(deltavolume=deltavolume))
+        elif any(word in azione for word in messages["commands"]["downvol"]):
+            os.system("osascript -e 'set volume output muted false'")  # Unmute
+            os.system(f"osascript -e 'set volume output volume (output volume of (get volume settings) - {deltavolume})'")
+            print(messages["other_messages"]["volume_decreased"].format(deltavolume=deltavolume))
+        elif any(word in azione for word in messages["commands"]["silent"]):
+            os.system("osascript -e 'set volume output muted not (output muted of (get volume settings))'")
+            print(messages["other_messages"]["volume_muted"])
+        else:
+            print(messages["error_messages"]["command_not_recognized"])
+
+    elif system_platform == "Windows":
+        try:
+            devices = AudioUtilities.GetSpeakers()
+            interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+            volume = cast(interface, POINTER(IAudioEndpointVolume))
+
+            if any(word in azione for word in messages["commands"]["setvol"]):
+                percent = int(''.join(filter(str.isdigit, azione)))
+                volume.SetMute(0, None)  # Unmute
+                volume.SetMasterVolumeLevelScalar(percent / 100, None)
+                print(f"Volume impostato a {percent}%")
+            elif any(word in azione for word in messages["commands"]["upvol"]):
+                volume.SetMute(0, None)  # Unmute
+                volume.SetMasterVolumeLevelScalar(min(volume.GetMasterVolumeLevelScalar() + deltavolume / 100, 1.0), None)
+                print(messages["other_messages"]["volume_increased"].format(deltavolume=deltavolume))
+            elif any(word in azione for word in messages["commands"]["downvol"]):
+                volume.SetMute(0, None)  # Unmute
+                volume.SetMasterVolumeLevelScalar(max(volume.GetMasterVolumeLevelScalar() - deltavolume / 100, 0.0), None)
+                print(messages["other_messages"]["volume_decreased"].format(deltavolume=deltavolume))
+            elif any(word in azione for word in messages["commands"]["silent"]):
+                volume.SetMute(not volume.GetMute(), None)
+                print(messages["other_messages"]["volume_muted"])
+            else:
+                print(messages["error_messages"]["command_not_recognized"])
+        except Exception as e:
+            print(messages["error_messages"]["error_volume_control"].format(system=system_platform))
     else:
-        print(messages["error_messages"]["command_not_recognized"])
+        print(messages["error_messages"]["error_system"])
 
 
 
@@ -536,7 +579,6 @@ def notes(testo):
 
 
 
-
 def comrecon(comando):
 
     global attivo, listreplybot, listsaluti, main_path, radios_json, time_start, uscita, riavvia,youtubeopen,messaggio
@@ -559,7 +601,7 @@ def comrecon(comando):
     def gestisci_uscita():
         global uscita
 
-        rispondi_e_parla(messages["other_messages"]["shutdown_confirmation"])
+        rispondi_e_parla(messages["other_messages"]["command_confirmation"])
         uscita = True
 
     def conferma_uscita():
@@ -576,7 +618,7 @@ def comrecon(comando):
     def gestisci_riavvio():
         global riavvia
         if not riavvia:
-          rispondi_e_parla(messages["other_messages"]["reboot_confirmation"])
+          rispondi_e_parla(messages["other_messages"]["command_confirmation"])
           riavvia = True
 
     def conferma_riavvio():
@@ -589,92 +631,93 @@ def comrecon(comando):
             rispondi_e_parla(messages["other_messages"]["reboot_cancelled"])
             riavvia = False
 
+    def esegui_com(comando):
+    #Funzione per determinare ed eseguire il comando ricevuto
 
+      if not parla_sintesi:
+        print(messages["other_messages"]["command"].format(comando=comando))  # Log del comando
+
+      if any(word in comando for word in messages["commands"]["exit"]) and any(word in comando for word in messages["objects"]["program"]) or "chiuditi" in comando:
+        rispondi_e_parla(random.choice(listsaluti))
+        estraipid(pid1, pid2)
+        os.kill(pid1, signal.SIGTERM)
+        exit()
+
+      if comando in messages["commands"]["restart"] and any(word in comando for word in messages["objects"]["pc"]):
+        gestisci_riavvio()
+
+      if riavvia:
+        conferma_riavvio()
+
+      if any(word in comando for word in messages["commands"]["turnoff"]) and any(word in comando for word in messages["objects"]["pc"]):
+        gestisci_uscita()
+
+      if uscita:
+        conferma_uscita()
+
+      if any(word in comando for word in messages["commands"]["open"]):
+        if "gestore" in comando and "file" in comando:
+            apri_gestore_file(".")
+        elif not apriBookmarks(listabookmarks, comando):
+            apriProgrammi(listaprogrammi, comando)
+
+      if any(word in comando for word in messages["commands"]["close"]):
+        chiudiProgrammi(listaprogrammi, comando)
+
+      if "radio" in comando:
+         match comando:
+            case c if any(word in c for word in messages["objects"]["list"]):
+                rispondi_e_parla(messages["other_messages"]["radio_list"])
+                lista_radio_csv()
+            case c if any(word in c for word in messages["objects"]["graphic"]):
+                rispondi_e_parla("Apro la radio con PyRadio")
+                subprocess.Popen(["pyradio"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            case c if any(word in c for word in messages["commands"]["change"]): #caso di passaggio ad altra stazione indicata
+                os.system("pkill ffplay")
+                ricerca_stazione_csv(comando)
+            case c if any(word in c for word in messages["commands"]["open"]):
+                ricerca_stazione_csv(comando)
+            case c if any(word in c for word in messages["commands"]["turnoff"]):
+                rispondi_e_parla(messages["other_messages"]["radio_closed"])
+                os.system("pkill ffplay")
+            # case _:
+            #  rispondi_e_parla("Non ho capito cosa fare con la radio.")
+
+      if "volume" in comando:
+        setVolume(comando)
+
+      if any(word in comando for word in messages["commands"]["close"]) and any(word in comando for word in messages["objects"]["window"]):
+        rispondi_e_parla(messages["other_messages"]["notes_closed"])
+        #process_manager.close_window() #ancora da definire lo sviluppo
+
+      if any(word in comando for word in messages["commands"]["search"]):
+        if "youtube" in comando or youtubeopen:
+            query = comando  # Da modificare per estrarre solo il dato che interessa
+            risultati = cerca_youtube(query, max_risultati=5)
+            for url in risultati:
+                webbrowser.open(url)
+
+      #per tutti gli altri casi usa l' IA
+      if any(word in comando for word in messages["commands"]["getAI"]):
+        if not "youtube" in comando:
+            response = get_groq_response(comando)
+            #response= get_deepseek_response(comando)
+            Process(target=notes, args=(response,), daemon=True).start()
+
+    #routine principale
     if not attivo:
         # Attesa wake word
         if wakeword in comando:
             attivo = True
             scrivistatus()
-            rispondi_e_parla(random.choice(listreplybot))
+            # Controlliamo se il comando è SOLO la wakeword
+            if comando.strip() == wakeword:
+                 rispondi_e_parla(random.choice(listreplybot))
+            else:
+                 esegui_com(comando)
     else:
-
-        if not parla_sintesi:
-             print(messages["other_messages"]["command"].format (comando=comando))  # Log del comando
-
-
-        if any (word in comando for word in messages["commands"]["exit"]) and any (word in comando for word in messages["objects"]["program"]) or "chiuditi" in comando:
-            rispondi_e_parla(random.choice(listsaluti))
-            estraipid(pid1, pid2)
-            os.kill(pid1, signal.SIGTERM)
-            exit()
-
-        if comando in messages["commands"]["restart"] and any(word in comando for word in messages["objects"]["pc"]):
-            gestisci_riavvio()
-        if riavvia:
-            conferma_riavvio()
-
-
-        if any(word in comando for word in messages["commands"]["turnoff"]) and any(word in comando for word in messages["objects"]["pc"]):
-            gestisci_uscita()
-        if uscita:
-            conferma_uscita()
-
-        if  any(word in comando for word in messages["commands"]["open"]):
-               if "gestore" in comando and "file" in comando:
-                   apri_gestore_file(".")
-
-               elif not apriBookmarks(listabookmarks, comando):
-                    apriProgrammi(listaprogrammi, comando)
-
-        if any(word in comando for word in messages["commands"]["close"]):
-                 chiudiProgrammi(listaprogrammi,comando)
-
-        if "radio" in comando:
-              match comando:
-                   case c if any(word in c for word in messages["objects"]["list"]):
-                       rispondi_e_parla(messages["other_messages"]["radio_list"])
-                       lista_radio_csv()
-
-                   case c if any(word in c for word in messages["objects"]["graphic"]):
-                       rispondi_e_parla("Apro la radio con PyRadio")
-                       subprocess.Popen(["pyradio"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-                   case c if any(word in c for word in messages["commands"]["open"]):
-                       ricerca_stazione_csv(comando)
-
-                   case c if any(word in c for word in messages["commands"]["close"]):
-                      rispondi_e_parla(messages["other_messages"]["radio_closed"])
-                      os.system("pkill ffplay")
-
-                   # case _:
-                   #     rispondi_e_parla("Non ho capito cosa fare con la radio.")
-
-
-        if "volume" in comando:
-             setVolume(comando)
-
-
-        if any(word in comando for word in messages["commands"]["close"]) and any(word in comando for word in messages["objects"]["window"]):
-             rispondi_e_parla(messages["other_messages"]["notes_closed"])
-             #process_manager.close_window() #ancora da definire lo sviluppo
-
-
-        if any(word in comando for word in messages["commands"]["search"]):
-          if "youtube" in comando or youtubeopen:
-              query =  comando #da modificare per estrarre solo il dato che interessa
-              risultati = cerca_youtube(query, max_risultati=5)
-              for url in risultati:
-                #alternativa con comando normale
-                webbrowser.open(url)
-
-        #else: #per tutti gli altri casi usa l'ia '
-        if any(word in comando for word in messages["commands"]["getAI"]):
-           if not "youtube" in comando:
-            #response = genai_response(comando)
-            response = get_groq_response(comando)
-            #print(botname + " : ", response)
-            Process(target=notes, args=(response,), daemon=True).start()
-
+         # Se già attivo, esegue direttamente il comando
+         esegui_com(comando)
 
 
 
@@ -687,6 +730,8 @@ class OutputRedirector(QObject):
 
     def flush(self):
         pass  # Necessario per compatibilità con sys.stdout
+
+
 
 def listacomandi():
     app = QApplication(sys.argv)
@@ -722,10 +767,9 @@ def listen():
        Thread(target=listacomandi,daemon=True).start()
        while True:
             threading.Timer(10.0, downtime_control).start()
-
             try:
 
-                audio = recognizer.listen(source,phrase_time_limit=20)
+                audio = recognizer.listen(source,phrase_time_limit=25)
                 comando = recognizer.recognize_google(audio,language="it-IT").lower()
                 #print(f"Comando riconosciuto: {comando}")  # Log del comando
                 comrecon(comando)
@@ -740,7 +784,7 @@ def listen():
 
 
 
-
+#non viene eseguita la  funzione se caricata nello script main.py
 if __name__ == "__main__":
     listen()
 

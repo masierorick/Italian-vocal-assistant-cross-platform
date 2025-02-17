@@ -269,13 +269,11 @@ def extract_firefox_bookmarks(db_path):
 
 
 def main():
-   global pid1,pid2,engine,current_dir
+   global pid1,pid2,engine,current_dir,attivo
 
    #controllo sistema operativo utilizzato
    system = platform.system()
    print(f"System: {system}")
-   #desktop_env = get_desktop_environment()
-   #print(f"Desktop Environment: {desktop_env}")
 
 
    programs = get_installed_programs()
@@ -297,7 +295,6 @@ def main():
 
 
    #scrittura nel file stastus.py attivo = false
-   global attivo
    with open(current_dir + "/script/status.py", 'w') as f:
      f.write(f"{"attivo"} = {attivo}\n")
 
@@ -320,7 +317,7 @@ def main():
      os.kill(pid1, signal.SIGTERM)
      os.kill(pid2, signal.SIGTERM)
 
-
+#avvio processo principale chiamando la funzione main
 if __name__ == '__main__':
    multiprocessing.set_start_method('spawn')
    main()

@@ -1,6 +1,7 @@
 import QtQuick 6.0
 import QtQuick.Controls 6.0
-import Qt.labs.settings 1.1
+import QtCore
+
 
 Window {
     id: appWindow
@@ -8,13 +9,12 @@ Window {
     flags: Qt.FramelessWindowHint | Qt.Window
     color: "transparent"
 
-
-    Settings {
+    Settings { //Usa QtCore.Settings
         id: windowSettings
-        property  int savedX: 200
-        property  int savedY: 200
-        property int savedWidth : 200
-        property int savedHeight : 200
+        property int savedX: 200
+        property int savedY: 200
+        property int savedWidth: 200
+        property int savedHeight: 200
     }
 
     x: windowSettings.savedX
@@ -22,33 +22,17 @@ Window {
     width: Math.max(testo.contentWidth + 20, 150)  // Larghezza minima 150
     height: Math.max(testo.contentHeight + 20, 100)  // Altezza minima 100
 
-    // Animazione per la larghezza
-        Behavior on width {
-            NumberAnimation {
-                duration: 500  // Durata in millisecondi
-                easing.type: Easing.InOutQuad  // Tipo di easing
-            }
-        }
+    // Animazioni
+    Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.InOutQuad } }
+    Behavior on height { NumberAnimation { duration: 500; easing.type: Easing.InOutQuad } }
 
-        // Animazione per l'altezza
-        Behavior on height {
-            NumberAnimation {
-                duration: 500  // Durata in millisecondi
-                easing.type: Easing.InOutQuad  // Tipo di easing
-            }
-        }
+    Component.onCompleted: {
+        width = windowSettings.savedWidth
+        height = windowSettings.savedHeight
+    }
 
-        // Animazione all'apertura della pagina
-        Component.onCompleted: {
-            width = windowSettings.savedWidth
-            height = windowSettings.savedHeight
-        }
-
-    // Monitoraggio dei cambiamenti di posizione per salvarli
     onXChanged: windowSettings.savedX = x
     onYChanged: windowSettings.savedY = y
-
-
 
     Rectangle {
         id: rectangle
@@ -65,121 +49,153 @@ Window {
             contentHeight: testo.height
             clip: true
 
-
-           Text{
-              objectName: "testo"
-              id: testo
-              text: ""
-              color: "white"
-              x: 10
-              y: 10
-              font.bold: true
-              font.pointSize: 12
-              wrapMode: Text.Wrap
-              width: appWindow.width * 0.9  // Occupa il 90% della larghezza disponibile
-
-
-              onTextChanged: {
-                   flickable.contentY = flickable.contentHeight - flickable.height;
+            TextArea {
+                objectName: "testo"
+                id: testo
+                text: ""
+                color: "white"
+                font.bold: true
+                font.pointSize: 12
+                wrapMode: Text.Wrap
+                width: appWindow.width * 0.9
+                readOnly: true
+                selectByMouse: true
+                onTextChanged: {
+                    flickable.contentY = flickable.contentHeight - flickable.height;
                 }
-
-           }
-           ScrollBar.vertical: ScrollBar {
-            policy: ScrollBar.AlwaysOn
-           }
-         }
-
-
-        MouseArea {
-             id: mouseArea
-             anchors.fill: parent
-             acceptedButtons: Qt.LeftButton | Qt.RightButton
-             hoverEnabled: true
-
-             property int edgeMargin: 10
-
-             function updateCursorShape(mouseX, mouseY) {
-               if (mouseX < edgeMargin && mouseY < edgeMargin)
-                mouseArea.cursorShape = Qt.SizeFDiagCursor;  // Angolo in alto a sinistra
-               else if (mouseX > width - edgeMargin && mouseY > height - edgeMargin)
-                mouseArea.cursorShape = Qt.SizeFDiagCursor;  // Angolo in basso a destra
-               else if (mouseX < edgeMargin && mouseY > height - edgeMargin)
-                mouseArea.cursorShape = Qt.SizeBDiagCursor;  // Angolo in basso a sinistra
-               else if (mouseX > width - edgeMargin && mouseY < edgeMargin)
-                mouseArea.cursorShape = Qt.SizeBDiagCursor;  // Angolo in alto a destra
-               else if (mouseX < edgeMargin)
-                mouseArea.cursorShape = Qt.SizeHorCursor;  // Bordo sinistro
-               else if (mouseX > width - edgeMargin)
-                mouseArea.cursorShape = Qt.SizeHorCursor;  // Bordo destro
-               else if (mouseY < edgeMargin)
-                mouseArea.cursorShape = Qt.SizeVerCursor;  // Bordo superiore
-               else if (mouseY > height - edgeMargin)
-                mouseArea.cursorShape = Qt.SizeVerCursor;  // Bordo inferiore
-               else
-                mouseArea.cursorShape = Qt.ArrowCursor;  // Nessun bordo
-             }
-
-             onPositionChanged: (mouse) => {
-                updateCursorShape(mouse.x, mouse.y);
-             }
-             onPressed: (mouse) => {
-               if (mouse.button == Qt.LeftButton) {
-                  if (mouseX < edgeMargin && mouseY < edgeMargin)
-                     appWindow.startSystemResize(Qt.TopLeftCorner);
-                  else if (mouseX > width - edgeMargin && mouseY > height - edgeMargin)
-                     appWindow.startSystemResize(Qt.BottomRightCorner);
-                  else if (mouseX < edgeMargin && mouseY > height - edgeMargin)
-                      appWindow.startSystemResize(Qt.BottomLeftCorner);
-                  else if (mouseX > width - edgeMargin && mouseY < edgeMargin)
-                      appWindow.startSystemResize(Qt.TopRightCorner);
-                  else if (mouseX < edgeMargin)
-                      appWindow.startSystemResize(Qt.LeftEdge);
-                  else if (mouseX > width - edgeMargin)
-                      appWindow.startSystemResize(Qt.RightEdge);
-                  else if (mouseY < edgeMargin)
-                      appWindow.startSystemResize(Qt.TopEdge);
-                  else if (mouseY > height - edgeMargin)
-                      appWindow.startSystemResize(Qt.BottomEdge);
-                  else
-                      appWindow.startSystemMove();
-               } else if (mouse.button == Qt.RightButton) {
-                   appWindow.close();
-               }
-             }
-
-             onWheel: function(wheel) {
-                if (wheel.modifiers & Qt.ControlModifier) {
-                             let delta = wheel.angleDelta.y / 120;
-                             appWindow.width += delta * 30;
-                             appWindow.height += delta * 30;
-                             windowSettings.savedWidth = appWindow.width;
-                             windowSettings.savedHeight = appWindow.height;
-
-                             if (appWindow.width < 150) appWindow.width = 150;
-                             if (appWindow.height < 100) appWindow.height = 100;
-                } else {
-                      wheel.accepted = false;
+                // Menu contestuale
+                Menu {
+                    id: contextMenu
+                    MenuItem {
+                        text: "Seleziona tutto"
+                        onTriggered: testo.selectAll()
+                    }
+                    MenuItem {
+                        text: "Copia"
+                        onTriggered: testo.copy()
+                    }
+                    MenuItem {
+                        text: "Sposta"
+                        onTriggered: mouseArea.moveMode = true;  // Attiva la modalità di spostamento
+                    }
+                    MenuItem {
+                        text: "Chiudi"
+                        onTriggered: appWindow.close()
+                    }
                 }
-             }
+            }
 
+            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AlwaysOn }
 
         }
     }
 
+    // MouseArea legato direttamente alla finestra
+    MouseArea {
+        id: mouseArea
+        anchors.fill: parent
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        hoverEnabled: true
+        propagateComposedEvents: true
+        property int edgeMargin: 10
+        property bool moveMode: false
 
-     Connections {
+        function updateCursorShape(mouseX, mouseY) {
+            if (mouseX < edgeMargin && mouseY < edgeMargin)
+                mouseArea.cursorShape = Qt.SizeFDiagCursor;  // Angolo in alto a sinistra
+            else if (mouseX > width - edgeMargin && mouseY > height - edgeMargin)
+                mouseArea.cursorShape = Qt.SizeFDiagCursor;  // Angolo in basso a destra
+            else if (mouseX < edgeMargin && mouseY > height - edgeMargin)
+                mouseArea.cursorShape = Qt.SizeBDiagCursor;  // Angolo in basso a sinistra
+            else if (mouseX > width - edgeMargin && mouseY < edgeMargin)
+                mouseArea.cursorShape = Qt.SizeBDiagCursor;  // Angolo in alto a destra
+            else if (mouseX < edgeMargin)
+                mouseArea.cursorShape = Qt.SizeHorCursor;  // Bordo sinistro
+            else if (mouseX > width - edgeMargin)
+                mouseArea.cursorShape = Qt.SizeHorCursor;  // Bordo destro
+            else if (mouseY < edgeMargin)
+                mouseArea.cursorShape = Qt.SizeVerCursor;  // Bordo superiore
+            else if (mouseY > height - edgeMargin)
+                mouseArea.cursorShape = Qt.SizeVerCursor;  // Bordo inferiore
+            else
+                mouseArea.cursorShape = Qt.ArrowCursor;  // Nessun bordo
+        }
 
-                  }
+        onPositionChanged: (mouse) => {
+            updateCursorShape(mouse.x, mouse.y);
+        }
 
+        onPressed: (mouse) => {
+            var mappedPoint = mapToItem(testo, mouse.x,mouse.y);
+            // Se il mouse è sulla TextArea, non fare nulla
+            if (!moveMode && testo.contains(mappedPoint)) {
+                if (mouse.button == Qt.RightButton) {
+                    contextMenu.popup();
+                }
+                else {
+                  mouse.accepted = false;
+                  return;
+                }
+            }
 
-     Component.onDestruction: {
+            // Attivare il movimento della finestra
+            if (moveMode && mouse.button == Qt.LeftButton) {
+                appWindow.startSystemMove();
+                moveMode = false;  // Disattiva la modalità spostamento dopo l'uso
+                return;
+            }
+
+            // Gestione ridimensionamento
+            if (mouse.button == Qt.LeftButton) {
+                if (mouse.x < edgeMargin && mouse.y < edgeMargin)
+                    appWindow.startSystemResize(Qt.TopLeftCorner);
+                else if (mouse.x > width - edgeMargin && mouse.y > height - edgeMargin)
+                    appWindow.startSystemResize(Qt.BottomRightCorner);
+                else if (mouse.x < edgeMargin && mouse.y > height - edgeMargin)
+                    appWindow.startSystemResize(Qt.BottomLeftCorner);
+                else if (mouse.x > width - edgeMargin && mouse.y < edgeMargin)
+                    appWindow.startSystemResize(Qt.TopRightCorner);
+                else if (mouse.x < edgeMargin)
+                    appWindow.startSystemResize(Qt.LeftEdge);
+                else if (mouse.x > width - edgeMargin)
+                    appWindow.startSystemResize(Qt.RightEdge);
+                else if (mouse.y < edgeMargin)
+                    appWindow.startSystemResize(Qt.TopEdge);
+                else if (mouse.y > height - edgeMargin)
+                    appWindow.startSystemResize(Qt.BottomEdge);
+            } else if (mouse.button == Qt.RightButton) {
+                contextMenu.popup();
+            }
+        }
+
+        onWheel: function(wheel) {
+            if (wheel.modifiers & Qt.ControlModifier) {
+                let delta = wheel.angleDelta.y / 120;
+                appWindow.width += delta * 30;
+                appWindow.height += delta * 30;
+                windowSettings.savedWidth = appWindow.width;
+                windowSettings.savedHeight = appWindow.height;
+
+                if (appWindow.width < 150) appWindow.width = 150;
+                if (appWindow.height < 100) appWindow.height = 100;
+            } else {
+                wheel.accepted = false;
+            }
+        }
+    }
+
+    Component.onDestruction: {
         windowSettings.savedX = appWindow.x;
         windowSettings.savedY = appWindow.y;
         windowSettings.savedWidth = appWindow.width;
         windowSettings.savedHeight = appWindow.height;
-
-
-
-     }
-
+    }
 }
+
+
+
+
+
+
+
+

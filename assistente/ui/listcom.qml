@@ -1,6 +1,6 @@
 import QtQuick 6.0
 import QtQuick.Controls 6.0
-import Qt.labs.settings 1.1
+import QtCore
 
 Window {
     id:appWindow
