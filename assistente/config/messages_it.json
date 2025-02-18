@@ -30,7 +30,7 @@
   "other_messages": {
     "waiting_wakeword" : "In ascolto per l'attivazione di {botname}",
     "command": "Comando : {comando}",
-    "radio_list": "Ecco l'elenco delle stazioni radio salvate:",
+    "radio_list": "Ecco l'elenco:",
     "volume_increased": "Volume aumentato del {deltavolume}%.",
     "volume_decreased": "Volume diminuito del {deltavolume}%.",
     "volume_muted": "Il volume è stato azzerato",
@@ -55,7 +55,7 @@
     "open": ["apri", "aprimi", "metti", "mettimi"],
     "close": ["chiudi", "esci"],
     "change": ["cambia", "passa"],
-    "turnoff": ["spegni", "spengi"],
+    "turnoff": ["spegni", "spengi", "chiudi"],
     "restart": ["riavvia"],
     "exit": ["esci", "chiuditi"],
     "search": ["cerca", "cercami"],

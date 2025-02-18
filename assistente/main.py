@@ -113,6 +113,7 @@ class ProcessManager(QObject):
 
 
 def get_installed_programs():
+    #Configurazione cross platform
     system = platform.system()
     programs = set()  # Usa un set per evitare duplicati
 

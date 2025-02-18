@@ -1,4 +1,11 @@
 # Changelog
+
+## [2.5.4] -2025-02-18
+- Compattato il codice per riconoscimento dei comandi (la funzione esegui_com)
+- Inserito il riconoscimento sia della lingua italiana che quella inglese 
+- audio = recognizer.listen(source,timeout=10) eliminato phrase_time_limit=25 
+-inserita nuova funzione adattalingua per errori di riconoscimento in inglese . Es. mito --> mitology
+
 ## [2.5.3] -2025-02-17
 - Corretto gestione volume. In precedenza silenziando l'audio non era possibile riattivarlo.
 - Inserito il comando "imposta il volume a " %
