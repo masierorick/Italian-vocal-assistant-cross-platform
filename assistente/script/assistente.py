@@ -609,6 +609,7 @@ def notes(testo):
 def comrecon(comando):
 
     global attivo, listreplybot, listsaluti, main_path, radios_json, time_start, uscita, riavvia,youtubeopen,messaggio,parla_sintesi
+    attendi_conferma = True
     listaprogrammi = main_path / "data/listaprogrammi"
     listabookmarks = main_path / "data/bookmarks"
     pid1, pid2 = 0, 0
@@ -616,7 +617,6 @@ def comrecon(comando):
 
     # Normalizzazione del comando
     comando = comando.lower().strip()
-
 
 
     # Scrive lo stato dell'assistente
@@ -627,46 +627,43 @@ def comrecon(comando):
         print(botname + ": " + messaggio)
         speak(messaggio)
 
-    def gestisci_uscita():
-        global uscita
-
-        rispondi_e_parla(messages["other_messages"]["command_confirmation"])
-        uscita = True
 
     def conferma_uscita():
-        global uscita
+         global uscita
 
-        if uscita:
          if any(re.search(pattern,comando,re.IGNORECASE) for pattern in risposte_comando):
             rispondi_e_parla(messages["other_messages"]["shutdown_executed"])
-            os.system("shutdown -h now")
+            #os.system("shutdown -h now")
          elif "no" in comando:
             uscita = False
             rispondi_e_parla(messages["other_messages"]["shutdown_cancelled"])
 
-    def gestisci_riavvio():
-        global riavvia
-        if not riavvia:
-          rispondi_e_parla(messages["other_messages"]["command_confirmation"])
-          riavvia = True
-
     def conferma_riavvio():
-        global riavvia
-        if riavvia:
+         global riavvia
+
+
          if any(re.search(pattern,comando,re.IGNORECASE) for pattern in risposte_comando):
             rispondi_e_parla(messages["other_messages"]["reboot_executed"])
-            os.system("sudo reboot")
+            #os.system("sudo reboot")
          elif "no" in comando:
             rispondi_e_parla(messages["other_messages"]["reboot_cancelled"])
             riavvia = False
 
+
     def esegui_com(comando):
+       global uscita,riavvia
+
        # Funzione per determinare ed eseguire il comando ricevuto con comandi semplificati
        comandomod = adattalingua(comando)  # Funzione per adattare la lingua
        comando = comandomod
 
        if not parla_sintesi:
           print(messages["other_messages"]["command"].format(comando=comando))  # Log del comando
+       #da tenere le funzioni riavvia e uscita in questo punto
+       if riavvia:
+           conferma_riavvio()
+       if uscita:
+             conferma_uscita()
 
        if any(word in comando for word in messages["commands"]["exit"] + ["chiuditi"]) and any(word in comando for word in messages["objects"]["program"]):
           rispondi_e_parla(random.choice(listsaluti))
@@ -675,16 +672,14 @@ def comrecon(comando):
           exit()
 
        if any(word in comando for word in messages["commands"]["restart"]) and any(word in comando  for word in messages["objects"]["pc"]):
-          if riavvia:
-            conferma_riavvio()
-          else:
-            gestisci_riavvio()
+            rispondi_e_parla(messages["other_messages"]["command_confirmation"]) #Sei sicuro?
+            riavvia = True
+
 
        if any(word in comando for word in messages["commands"]["turnoff"]) and any(word in comando for word in messages["objects"]["pc"]):
-          if uscita:
-            conferma_uscita()
-          else:
-            gestisci_uscita()
+           rispondi_e_parla(messages["other_messages"]["command_confirmation"]) #Sei sicuro?
+           uscita = True
+
 
        if any(word in comando for word in messages["commands"]["open"]):
           if "gestore" in comando and "file" in comando:
