@@ -95,7 +95,8 @@ recognizer = sr.Recognizer()
 #sensibilità microfono fissa (es. 300) o dinamica
 recognizer.energy_threshold = 180
 #recognizer.dynamic_energy_threshold = 'False'
-recognizer.pause_threshold = 1.5
+recognizer.pause_threshold = 1.2
+
 
 # Imposta la variabile di ambiente QT_QPA_PLATFORM
 os.environ["QT_QPA_PLATFORM"] = "xcb"
@@ -343,7 +344,7 @@ def apriProgrammi(listaprogrammi, comando):
             speak(messages["error_messages"]["program_not_found"])
             return False
         except subprocess.CalledProcessError as e:
-            speak(messages["error_messages"]["called_process_errror"])
+            speak(messages["error_messages"]["called_process_error"])
             return False
 
     # Apri programmi da un file
@@ -368,7 +369,7 @@ def apriProgrammi(listaprogrammi, comando):
                             speak(messages["error_messages"]["program_not_found"])
                             return False
                         except subprocess.CalledProcessError as e:
-                            speak(messages["error_messages"]["called_process_errror"])
+                            speak(messages["error_messages"]["called_process_error"])
 
 
                             return False
@@ -633,7 +634,7 @@ def comrecon(comando):
 
          if any(re.search(pattern,comando,re.IGNORECASE) for pattern in risposte_comando):
             rispondi_e_parla(messages["other_messages"]["shutdown_executed"])
-            #os.system("shutdown -h now")
+            os.system("shutdown -h now")
          elif "no" in comando:
             uscita = False
             rispondi_e_parla(messages["other_messages"]["shutdown_cancelled"])
@@ -644,7 +645,7 @@ def comrecon(comando):
 
          if any(re.search(pattern,comando,re.IGNORECASE) for pattern in risposte_comando):
             rispondi_e_parla(messages["other_messages"]["reboot_executed"])
-            #os.system("sudo reboot")
+            os.system("sudo reboot")
          elif "no" in comando:
             rispondi_e_parla(messages["other_messages"]["reboot_cancelled"])
             riavvia = False
@@ -706,6 +707,8 @@ def comrecon(comando):
           elif any(word in comando for word in messages["commands"]["turnoff"]):
             rispondi_e_parla(messages["other_messages"]["radio_closed"])
             os.system("pkill ffplay")
+          elif any(word in comando for word in messages["commands"]["silent"]):
+              setVolume(comando)
 
        if "volume" in comando:
         setVolume(comando)
@@ -737,12 +740,26 @@ def comrecon(comando):
 class OutputRedirector(QObject):
     newOutput = Signal(str)  # Segnale che invia l'output alla UI
 
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
     def write(self, text):
         if text.strip():
             self.newOutput.emit(text.strip())  # Invia il testo alla UI
 
     def flush(self):
         pass  # Necessario per compatibilità con sys.stdout
+
+    @Slot(str)
+    def sendCommand(self, command):
+        """Riceve il comando dal QML ed esegue l'azione corrispondente."""
+        #self.newOutput.emit(f"Comando ricevuto: {command}")
+
+        try:
+            comrecon(command)  # Esegue comrecon senza aspettare un ritorno
+        except Exception as e:
+            self.newOutput.emit(messages["error_messages"]["called_process_error"].format(e=e))
+
 
 
 
@@ -763,8 +780,6 @@ def listacomandi():
 
     if not engine.rootObjects():
         sys.exit(-1)
-
-
     print(messages["other_messages"]["waiting_wakeword"].format(botname=botname))
     app.exec()
 

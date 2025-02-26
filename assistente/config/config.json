@@ -2,6 +2,6 @@
     "botname": "MA.R.CO",
     "wakeword": "marco",
     "sleep_time": 30,
-    "deltavolume" : 5
+    "deltavolume" : 10
 
 }

@@ -22,26 +22,26 @@ Window {
     height: 0 //windowSettings.savedHeight
 
     // Animazione per la larghezza
-        Behavior on width {
-            NumberAnimation {
-                duration: 500  // Durata in millisecondi
-                easing.type: Easing.InOutQuad  // Tipo di easing
-            }
+    Behavior on width {
+        NumberAnimation {
+            duration: 500
+            easing.type: Easing.InOutQuad
         }
+    }
 
-        // Animazione per l'altezza
-        Behavior on height {
-            NumberAnimation {
-                duration: 500  // Durata in millisecondi
-                easing.type: Easing.InOutQuad  // Tipo di easing
-            }
+    // Animazione per l'altezza
+    Behavior on height {
+        NumberAnimation {
+            duration: 500
+            easing.type: Easing.InOutQuad
         }
+    }
 
-        // Animazione all'apertura della pagina
-        Component.onCompleted: {
-            width = windowSettings.savedWidth
-            height = windowSettings.savedHeight
-        }
+    // Animazione all'apertura della pagina
+    Component.onCompleted: {
+        width = windowSettings.savedWidth
+        height = windowSettings.savedHeight
+    }
 
     // Monitoraggio dei cambiamenti di posizione per salvarli
     onXChanged: windowSettings.savedX = x
@@ -49,11 +49,10 @@ Window {
 
     Rectangle {
         id: rectangle
-        color: "#80000000"  // Semitrasparente
+        color: "#80000000"
         radius: 10
         anchors.fill: parent
         anchors.margins: 10
-
 
         Flickable {
             id: flickable
@@ -63,7 +62,7 @@ Window {
             contentHeight: testo.height
             clip: true
 
-          Text {
+            Text {
                 objectName: "testo"
                 id: testo
                 text: ""
@@ -74,16 +73,50 @@ Window {
                 textFormat: Text.PlainText
 
                 onTextChanged: {
-                   flickable.contentY = flickable.contentHeight - flickable.height;
+                    flickable.contentY = flickable.contentHeight - flickable.height;
                 }
             }
-           ScrollBar.vertical: ScrollBar {
-            policy: ScrollBar.AlwaysOn
-           }
+            ScrollBar.vertical: ScrollBar {
+                policy: ScrollBar.AlwaysOn
+            }
         }
 
+        Column {
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.margins: 10
+            spacing: 5
 
-         MouseArea {
+            Rectangle {
+                width: parent.width
+                height: 30
+                color: "#303030"
+                radius: 5
+                border.color: "#505050"
+
+                TextField {
+                    id: commandInput
+                    width: parent.width - 20
+                    height: parent.height
+                    anchors.centerIn: parent
+                    placeholderText: "Inserisci un comando..."
+                    color: "black"
+                    selectionColor: "#606060"
+                    focus: true
+
+                    onAccepted: {
+                        if (text.trim().length > 0) {
+                            testo.text += "> " + text + "\n";
+                            outputRedirector.sendCommand(text);
+                            text = "";
+                        }
+                    }
+                }
+            }
+        }
+
+        MouseArea {
             id: mouseArea
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton | Qt.RightButton
@@ -91,73 +124,69 @@ Window {
 
             property int edgeMargin: 10
 
-             function updateCursorShape(mouseX, mouseY) {
-               if (mouseX < edgeMargin && mouseY < edgeMargin)
-                mouseArea.cursorShape = Qt.SizeFDiagCursor;  // Angolo in alto a sinistra
-               else if (mouseX > width - edgeMargin && mouseY > height - edgeMargin)
-                mouseArea.cursorShape = Qt.SizeFDiagCursor;  // Angolo in basso a destra
-               else if (mouseX < edgeMargin && mouseY > height - edgeMargin)
-                mouseArea.cursorShape = Qt.SizeBDiagCursor;  // Angolo in basso a sinistra
-               else if (mouseX > width - edgeMargin && mouseY < edgeMargin)
-                mouseArea.cursorShape = Qt.SizeBDiagCursor;  // Angolo in alto a destra
-               else if (mouseX < edgeMargin)
-                mouseArea.cursorShape = Qt.SizeHorCursor;  // Bordo sinistro
-               else if (mouseX > width - edgeMargin)
-                mouseArea.cursorShape = Qt.SizeHorCursor;  // Bordo destro
-               else if (mouseY < edgeMargin)
-                mouseArea.cursorShape = Qt.SizeVerCursor;  // Bordo superiore
-               else if (mouseY > height - edgeMargin)
-                mouseArea.cursorShape = Qt.SizeVerCursor;  // Bordo inferiore
-               else
-                mouseArea.cursorShape = Qt.ArrowCursor;  // Nessun bordo
-             }
-
-             onPositionChanged: (mouse) => {
-                updateCursorShape(mouse.x, mouse.y);
-             }
-
-            onPressed: (mouse)=> {
-               if (mouse.button == Qt.LeftButton) {
-                  if (mouseX < edgeMargin && mouseY < edgeMargin)
-                     appWindow.startSystemResize(Qt.TopLeftCorner);
-                  else if (mouseX > width - edgeMargin && mouseY > height - edgeMargin)
-                     appWindow.startSystemResize(Qt.BottomRightCorner);
-                  else if (mouseX < edgeMargin && mouseY > height - edgeMargin)
-                      appWindow.startSystemResize(Qt.BottomLeftCorner);
-                  else if (mouseX > width - edgeMargin && mouseY < edgeMargin)
-                      appWindow.startSystemResize(Qt.TopRightCorner);
-                  else if (mouseX < edgeMargin)
-                      appWindow.startSystemResize(Qt.LeftEdge);
-                  else if (mouseX > width - edgeMargin)
-                      appWindow.startSystemResize(Qt.RightEdge);
-                  else if (mouseY < edgeMargin)
-                      appWindow.startSystemResize(Qt.TopEdge);
-                  else if (mouseY > height - edgeMargin)
-                      appWindow.startSystemResize(Qt.BottomEdge);
-                  else
-                      appWindow.startSystemMove();
-               }
+            function updateCursorShape(mouseX, mouseY) {
+                if (mouseX < edgeMargin && mouseY < edgeMargin)
+                    mouseArea.cursorShape = Qt.SizeFDiagCursor;
+                else if (mouseX > width - edgeMargin && mouseY > height - edgeMargin)
+                    mouseArea.cursorShape = Qt.SizeFDiagCursor;
+                else if (mouseX < edgeMargin && mouseY > height - edgeMargin)
+                    mouseArea.cursorShape = Qt.SizeBDiagCursor;
+                else if (mouseX > width - edgeMargin && mouseY < edgeMargin)
+                    mouseArea.cursorShape = Qt.SizeBDiagCursor;
+                else if (mouseX < edgeMargin)
+                    mouseArea.cursorShape = Qt.SizeHorCursor;
+                else if (mouseX > width - edgeMargin)
+                    mouseArea.cursorShape = Qt.SizeHorCursor;
+                else if (mouseY < edgeMargin)
+                    mouseArea.cursorShape = Qt.SizeVerCursor;
+                else if (mouseY > height - edgeMargin)
+                    mouseArea.cursorShape = Qt.SizeVerCursor;
+                else
+                    mouseArea.cursorShape = Qt.ArrowCursor;
             }
-          }
 
+            onPositionChanged: (mouse) => {
+                updateCursorShape(mouse.x, mouse.y);
+            }
 
-      }
-
-
+            onPressed: (mouse) => {
+                if (mouse.button == Qt.LeftButton) {
+                    if (mouseX < edgeMargin && mouseY < edgeMargin)
+                        appWindow.startSystemResize(Qt.TopLeftCorner);
+                    else if (mouseX > width - edgeMargin && mouseY > height - edgeMargin)
+                        appWindow.startSystemResize(Qt.BottomRightCorner);
+                    else if (mouseX < edgeMargin && mouseY > height - edgeMargin)
+                        appWindow.startSystemResize(Qt.BottomLeftCorner);
+                    else if (mouseX > width - edgeMargin && mouseY < edgeMargin)
+                        appWindow.startSystemResize(Qt.TopRightCorner);
+                    else if (mouseX < edgeMargin)
+                        appWindow.startSystemResize(Qt.LeftEdge);
+                    else if (mouseX > width - edgeMargin)
+                        appWindow.startSystemResize(Qt.RightEdge);
+                    else if (mouseY < edgeMargin)
+                        appWindow.startSystemResize(Qt.TopEdge);
+                    else if (mouseY > height - edgeMargin)
+                        appWindow.startSystemResize(Qt.BottomEdge);
+                    else
+                        appWindow.startSystemMove();
+                }
+            }
+        }
+    }
 
     Connections {
-             target: outputRedirector
-             function onNewOutput(msg) {
-                            testo.text += msg + "\n"
-                           }
-                  }
+        target: outputRedirector
+        function onNewOutput(msg) {
+            testo.text += msg + "\n";
+        }
+    }
 
-     Component.onDestruction: {
-       appWindow.x = windowSettings.savedX
-       appWindow.y = windowSettings.savedY
-       appWindow.width = windowSettings.savedWidth
-       appWindow.height = windowSettings.savedHeight
-
-     }
-
+    Component.onDestruction: {
+        appWindow.x = windowSettings.savedX;
+        appWindow.y = windowSettings.savedY;
+        appWindow.width = windowSettings.savedWidth;
+        appWindow.height = windowSettings.savedHeight;
+    }
 }
+
+

@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.5.6] -2025-02-26 
+- Inserito nella lista dei comandi la possibilità di inviare anche messaggi testuali 
+- corretti bug minori su errori 
+
 ## [2.5.5] -2025-02-18 
 - Corrette le funzioni riavvia e esci che non lavoravano correttamente in uscita dal programma 
 

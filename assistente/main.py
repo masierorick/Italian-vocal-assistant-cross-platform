@@ -36,7 +36,7 @@ attivo = False
 
 
 def animazione():
-  global root
+  #global root
   global current_dir
   global engine
 
