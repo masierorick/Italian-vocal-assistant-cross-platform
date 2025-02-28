@@ -1,1 +1,1 @@
-attivo = True
+attivo = False

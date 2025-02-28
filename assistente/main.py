@@ -25,89 +25,10 @@ from pathlib import Path
 
 
 #variabili globali
-pid2 = 0
-pid1 = 0
-#root = None
 current_dir = os.path.dirname(os.path.abspath(__file__))
-engine = None
 listaprogrammi = current_dir + "/data/listaprogrammi"
 listabookmarks = current_dir + "/data/bookmarks"
 attivo = False
-
-
-def animazione():
-  #global root
-  global current_dir
-  global engine
-
-  # Imposta la variabile di ambiente QT_QPA_PLATFORM
-  os.environ["QT_QPA_PLATFORM"] = "xcb"
-
-  # Leggere il file JSON in Python
-  with open(current_dir+"/config/config.json", "r") as file:
-    config_data = json.load(file)
-
-  app = QGuiApplication(sys.argv)
-
-  #parametri importanti per salvare il file delle impostazioni
-  app.setOrganizationName("TecnoMas")
-  app.setOrganizationDomain("tecnomas.engineering.com")
-  app.setApplicationName("assistente")
-  process_manager = ProcessManager()
-
-  engine = QQmlApplicationEngine()
-  # il comando esporta un oggetto Python (process_manager) al contesto QML con il nome processManager, rendendolo accessibile da qualsiasi elemento QML all'interno della tua applicazione.
-  engine.rootContext().setContextProperty("processManager", process_manager)
-  # Passare i dati a QML
-  engine.rootContext().setContextProperty("configData", config_data)
-  engine.quit.connect(app.quit)
-  engine.load(current_dir + "/ui/main.qml")
-
-  if not engine.rootObjects():
-        print("Errore: impossibile caricare il file QML.")
-        sys.exit(-1)
-
-  app.exec()
-
-
-def runassistente():
-   #esegue il programma di assistente vocale importato da script.assistente
-   listen()
-
-
-class ProcessManager(QObject):
-
-    def __init__(self):
-        super().__init__()
-
-    @Slot()
-    #slot per stop processo assistente.py
-    def stop_process(self):
-            global pid2
-            #Termina il processo assistente
-            os.kill(pid2, signal.SIGTERM)
-
-    @Slot()
-    # Slot per controllo cambio colore botname nel caso sia attivo
-    def checkColor(self):
-      import re
-      pattern = r'(\w+)\s*=\s*(.*)'  #\w+ corrisponde alla variabile, .* al valore dopo '='
-      filestatus = current_dir+"/script/status.py"
-      root_object = engine.rootObjects()[0]
-      testo = root_object.findChild(QObject, "botname")
-
-      with open(filestatus, 'r') as file:
-        for numero_riga, riga in enumerate(file, 1):
-            match = re.match(pattern, riga.strip())  # Cerca la corrispondenza
-            if match:
-              variabile = match.group(1)  # Variabile (prima del '=')
-              if ("attivo") in variabile:
-                attivo = match.group(2)  # Valore (dopo '=')
-                if attivo == "True":
-                      #inserire la condizione di verifica se botname attivo oppure no
-                     testo.setProperty("color", "red")  # Modifica il colore
-                if attivo == "False":
-                     testo.setProperty("color", "white")  # Modifica il colore
 
 
 
@@ -266,8 +187,8 @@ def extract_firefox_bookmarks(db_path):
     temp_db.unlink()
     return bookmarks
 
-
-
+def runassistente():
+    listen()
 
 def main():
    global pid1,pid2,engine,current_dir,attivo
@@ -299,26 +220,18 @@ def main():
    with open(current_dir + "/script/status.py", 'w') as f:
      f.write(f"{"attivo"} = {attivo}\n")
 
-   #esecuzione multiprocesso assistente e interfaccia grafica
    try:
-      (p1 := Process(name='interfaccia', target=animazione)).start()
-      (p2 := Process(name='assistente', target=runassistente)).start()
+     (p2 := Process(name='assistente', target=runassistente)).start()
 
-      pid1 = p1.pid
-      pid2 = p2.pid
-      with open(current_dir + "/script/pid.py", 'w') as f:
-       f.write(f"{"pid1"} = {pid1}\n")
-       f.write(f"{"pid2"} = {pid2}\n")
-      f.close()
-
-
+     with open(current_dir + "/script/pid.py", 'w') as f:
+       f.write(f"{"pid2"} = {p2.pid}\n")
+       f.close()
 
    except (SystemExit, KeyboardInterrupt):
-     # Terminazione esplicita dei processi
-     os.kill(pid1, signal.SIGTERM)
-     os.kill(pid2, signal.SIGTERM)
+      os.kill(p2.pid, signal.SIGTERM)
+
 
 #avvio processo principale chiamando la funzione main
 if __name__ == '__main__':
-   multiprocessing.set_start_method('spawn')
+
    main()

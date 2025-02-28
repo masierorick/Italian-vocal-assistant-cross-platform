@@ -63,6 +63,7 @@ Window {
                 onTextChanged: {
                     flickable.contentY = flickable.contentHeight - flickable.height;
                 }
+
                 // Menu contestuale
                 Menu {
                     id: contextMenu

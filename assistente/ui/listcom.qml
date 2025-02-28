@@ -8,6 +8,7 @@ Window {
     flags: Qt.FramelessWindowHint | Qt.Window
     color: "transparent"
 
+
     Settings {
         id: windowSettings
         property  int savedX: 200
@@ -53,11 +54,18 @@ Window {
         radius: 10
         anchors.fill: parent
         anchors.margins: 10
+        height: appWindow.height - 30
 
         Flickable {
             id: flickable
-            anchors.fill: parent
-            anchors.margins: 10
+            anchors {
+                top: parent.top
+                left: parent.left
+                right: parent.right
+                bottom: commandColumn.top
+                margins: 10
+            }
+
             contentWidth: testo.width
             contentHeight: testo.height
             clip: true
@@ -82,13 +90,17 @@ Window {
         }
 
         Column {
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.margins: 10
+            id: commandColumn
+            anchors {
+                bottom: parent.bottom
+                left: parent.left
+                right: parent.right
+                margins: 10
+            }
             spacing: 5
 
             Rectangle {
+                id: comando
                 width: parent.width
                 height: 30
                 color: "#303030"
@@ -97,9 +109,10 @@ Window {
 
                 TextField {
                     id: commandInput
-                    width: parent.width - 20
+                    width: parent.width - 10
                     height: parent.height
                     anchors.centerIn: parent
+                    anchors.margins: 10
                     placeholderText: "Inserisci un comando..."
                     color: "black"
                     selectionColor: "#606060"
@@ -108,7 +121,7 @@ Window {
                     onAccepted: {
                         if (text.trim().length > 0) {
                             testo.text += "> " + text + "\n";
-                            outputRedirector.sendCommand(text);
+                            animationManager.sendCommand(text);
                             text = "";
                         }
                     }
@@ -175,7 +188,7 @@ Window {
     }
 
     Connections {
-        target: outputRedirector
+        target: animationManager
         function onNewOutput(msg) {
             testo.text += msg + "\n";
         }

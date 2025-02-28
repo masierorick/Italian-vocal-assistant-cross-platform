@@ -57,6 +57,7 @@ radios_csv = main_path / "data/stations.csv"
 config_path = main_path / "config/config.json"
 messages_path = main_path / "config/messages_it.json"
 
+
 # Carica configurazione da file json
 with open(config_path, "r") as config_file:
     config = json.load(config_file)
@@ -70,7 +71,7 @@ botname = config["botname"]
 wakeword = config["wakeword"]
 sleep_time = config["sleep_time"]#  secondi per inattività
 deltavolume = config["deltavolume"] #valore percentuale
-
+layout = config["layout"]
 
 attivo = False
 uscita = False
@@ -80,6 +81,7 @@ parla_sintesi = False # Flag per controllare lo stato della sintesi vocale
 numnote= 0
 youtubeopen = False
 messaggio = ""
+engine = None
 
 
 #Sequenze di risposta
@@ -135,28 +137,46 @@ def get_groq_response(text):
     return response.choices[0].message.content
 
 
-
 def cerca_youtube(query, max_risultati=5):
-    # Cerca video su YouTube
-    richiesta = youtube.search().list(
-        q=query,
-        part="snippet",
-        type="video",
-        maxResults=max_risultati
-    )
-    risposta = richiesta.execute()
+    try:
+        # Rimuovi le parole non necessarie (esempio: "cerca su youtube")
+        query_pulita = re.sub(r'cerca su youtube', '', query, flags=re.IGNORECASE).strip()
+        print ("query_pulita:",query_pulita)
 
-    # Mostra i risultati
-    urls = []
+        if not query_pulita:
+            print("Nessuna query valida dopo la pulizia.")
+            return []
 
-    for item in risposta["items"]:
-        titolo = item["snippet"]["title"]
-        url = f"https://www.youtube.com/watch?v={item['id']['videoId']}"
-        urls.append(url)  # Aggiungi ogni URL alla lista
-        print(f"Titolo: {titolo}")
-        print(f"URL: {url}")
-        print("-" * 40)
-    return urls
+        # Cerca video su YouTube con la query pulita
+        richiesta = youtube.search().list(
+            q=query_pulita,
+            part="snippet",
+            type="video",
+            maxResults=max_risultati
+        )
+        risposta = richiesta.execute()
+
+        # Controllo se la risposta contiene "items"
+        if "items" not in risposta:
+            print("Nessun risultato trovato.")
+            return []
+
+        # Mostra i risultati
+        urls = []
+
+        for item in risposta["items"]:
+            titolo = item["snippet"]["title"]
+            url = f"https://www.youtube.com/watch?v={item['id']['videoId']}"
+            urls.append(url)  # Aggiungi ogni URL alla lista
+            print(f"Titolo: {titolo}")
+            print(f"URL: {url}")
+            print("-" * 40)
+
+        return urls
+
+    except Exception as e:
+        print(f"Errore durante la ricerca su YouTube: {e}")
+        return []
 
 
 def speak(text):
@@ -187,15 +207,6 @@ def downtime_control():
         print(f"{botname} in stand-by.")
 
 
-def downtime_control_loop():
-    #questa funzione genera il loop per il controllo dell'attività dell'assistente ogni 10 secondi
-    while True:
-        time.sleep(10)
-        downtime_control()
-
-    Thread(target=downtime_control_loop, daemon=True).start()
-
-
 
 def lista_radio_csv():
    """Stampa e visualizza la lista delle stazioni radio salvate."""
@@ -207,8 +218,9 @@ def lista_radio_csv():
                 if line_count > 0:
                     testo += f"{row[0]}\n"
 
-            #avvia la finestra delle note in un processo
-            Process(target=notes, args=(testo,), daemon=True).start()
+            # Avvia la finestra delle note in un nuovo processo
+            subprocess.Popen([sys.executable, "-c", f"from script.assistente import notes; notes({repr(testo)})"])
+
 
    except FileNotFoundError:
         print(messages["error_messages"]["error_file_not_found"])
@@ -227,6 +239,7 @@ def ricerca_stazione_csv(comando):
                     return
     except FileNotFoundError:
        print(messages["error_messages"]["error_file_not_found"])
+
 
 
 def play_radio_csv(stazione,url):
@@ -319,6 +332,7 @@ def adattalingua(comando):
     for errato, corretto in correzioni.items():
         comando = comando.replace(errato, corretto)
     return comando
+
 
 
 def apriProgrammi(listaprogrammi, comando):
@@ -432,21 +446,18 @@ def scrivistatus(): # Funzione per deternimare lo stato attivo dell'assistente v
        f.write(f"{"attivo"} = {attivo}\n")
 
 
+def estraipid(pid2):
 
-def estraipid(pid1,pid2):
-  import re
   pattern = r'(\w+)\s*=\s*(.*)'  #\w+ corrisponde alla variabile, .* al valore dopo '='
   with open(current_dir+"/pid.py", 'r') as file:
     for numero_riga, riga in enumerate(file, 1):
        match = re.match(pattern, riga.strip())  # Cerca la corrispondenza
        if match:
             variabile = match.group(1)  # Variabile (prima del '=')
-            if ("pid1") in variabile:
-              pid1 = int(match.group(2))  # Valore (dopo '=')
-              #print (variabile, pid1)
             if ("pid2") in variabile:
               pid2 = int(match.group(2))  # Valore (dopo '=')
               #print (variabile, pid2)
+
 
 
 def setVolume(azione):
@@ -540,73 +551,6 @@ def setVolume(azione):
 
 
 
-class ProcessManager(QObject):
-
-    def __init__(self, app_window):
-        super().__init__()
-        self.app_window = app_window
-
-    @Slot()
-    def close_window(self):
-        """ Chiude la finestra associata """
-        if self.app_window:
-            self.app_window.close()
-
-    @Slot(str)
-    def check_text(self, testo):
-        """ Controlla e aggiorna il testo nell'interfaccia QML """
-
-        if self.app_window:
-            text_obj = self.app_window.findChild(QObject, "testo")
-            if text_obj:
-                text_obj.setProperty("text", testo)
-            else:
-                print("Errore: oggetto 'testo' non trovato in QML.")
-        else:
-            print("Errore: finestra principale non definita.")
-
-
-
-
-
-def notes(testo):
-    """ Avvia l'applicazione QML e imposta il testo iniziale """
-    global numnote  # Mantiene il conteggio delle note
-
-    app = QGuiApplication(sys.argv)
-
-    # Crea l'applicazione
-    app.setOrganizationName("TecnoMas")
-    app.setOrganizationDomain("tecnomas.engineering.com")
-    app.setApplicationName("notes")
-
-    # Configura il file QML e lo carica
-    engine = QQmlApplicationEngine()
-    engine.load(main_path / 'ui/notes.qml')
-
-    if not engine.rootObjects():
-        print(messages["error_messages"]["error_load_qml"])
-        sys.exit(-1)
-
-    root_object = engine.rootObjects()[0]
-
-    # Crea l'istanza di ProcessManager e passa la finestra principale
-    process_manager = ProcessManager(app_window=root_object)
-    engine.rootContext().setContextProperty("processManager", process_manager)  # Collegamento alla classe in QML
-
-    # Aggiorna il testo tramite il metodo check_text
-    process_manager.check_text(testo)
-
-    numnote += 1  # Incrementa il conteggio delle note
-
-    # Salva il PID in un file
-    with open(current_dir + "/notepid.py", 'w') as f:
-        f.write(f"note{numnote} = {os.getpid()}\n")
-
-    app.exec()
-
-
-
 def comrecon(comando):
 
     global attivo, listreplybot, listsaluti, main_path, radios_json, time_start, uscita, riavvia,youtubeopen,messaggio,parla_sintesi
@@ -660,6 +604,7 @@ def comrecon(comando):
 
        if not parla_sintesi:
           print(messages["other_messages"]["command"].format(comando=comando))  # Log del comando
+
        #da tenere le funzioni riavvia e uscita in questo punto
        if riavvia:
            conferma_riavvio()
@@ -668,8 +613,8 @@ def comrecon(comando):
 
        if any(word in comando for word in messages["commands"]["exit"] + ["chiuditi"]) and any(word in comando for word in messages["objects"]["program"]):
           rispondi_e_parla(random.choice(listsaluti))
-          estraipid(pid1, pid2)
-          os.kill(pid1, signal.SIGTERM)
+          estraipid(pid2)
+          os.kill(pid2, signal.SIGTERM)
           exit()
 
        if any(word in comando for word in messages["commands"]["restart"]) and any(word in comando  for word in messages["objects"]["pc"]):
@@ -721,7 +666,9 @@ def comrecon(comando):
 
        if any(word in comando for word in messages["commands"]["getAI"]) and "youtube" not in comando:
           response = get_groq_response(comando)
-          Process(target=notes, args=(response,), daemon=True).start()
+          # Avvia la finestra delle note in un nuovo processo
+          subprocess.Popen([sys.executable, "-c", f"from script.assistente import notes; notes({repr(response)})"])
+
 
     # Routine principale
     if not attivo:
@@ -737,11 +684,81 @@ def comrecon(comando):
 
 
 
-class OutputRedirector(QObject):
+class ProcessManager(QObject):
+
+    def __init__(self, app_window):
+        super().__init__()
+        self.app_window = app_window
+
+    @Slot()
+    def close_window(self):
+        """ Chiude la finestra associata """
+        if self.app_window:
+            self.app_window.close()
+
+    @Slot(str)
+    def check_text(self, testo):
+        """ Controlla e aggiorna il testo nell'interfaccia QML """
+
+        if self.app_window:
+            text_obj = self.app_window.findChild(QObject, "testo")
+            if text_obj:
+                text_obj.setProperty("text", testo)
+            else:
+                print("Errore: oggetto 'testo' non trovato in QML.")
+        else:
+            print("Errore: finestra principale non definita.")
+
+
+
+
+def notes(testo):
+    """ Avvia l'applicazione QML e imposta il testo iniziale """
+    global numnote  # Mantiene il conteggio delle note
+
+    app = QGuiApplication(sys.argv)
+
+    # Crea l'applicazione
+    app.setOrganizationName("TecnoMas")
+    app.setOrganizationDomain("tecnomas.engineering.com")
+    app.setApplicationName("notes")
+
+    # Configura il file QML e lo carica
+    engine = QQmlApplicationEngine()
+    engine.load(main_path / 'ui/notes.qml')
+
+    if not engine.rootObjects():
+        print(messages["error_messages"]["error_load_qml"])
+        sys.exit(-1)
+
+    root_object = engine.rootObjects()[0]
+
+    # Crea l'istanza di ProcessManager e passa la finestra principale
+    process_manager = ProcessManager(app_window=root_object)
+    engine.rootContext().setContextProperty("processManager", process_manager)  # Collegamento alla classe in QML
+
+    # Aggiorna il testo tramite il metodo check_text
+    process_manager.check_text(testo)
+
+    numnote += 1  # Incrementa il conteggio delle note
+
+    # Salva il PID in un file
+    with open(current_dir + "/notepid.py", 'w') as f:
+        f.write(f"note{numnote} = {os.getpid()}\n")
+
+    app.exec()
+
+
+
+class AnimationManager(QObject):
     newOutput = Signal(str)  # Segnale che invia l'output alla UI
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+
+
+    def __init__(self):
+        super().__init__()
+        self.window = None
+
 
     def write(self, text):
         if text.strip():
@@ -752,51 +769,165 @@ class OutputRedirector(QObject):
 
     @Slot(str)
     def sendCommand(self, command):
+        global attivo
         """Riceve il comando dal QML ed esegue l'azione corrispondente."""
-        #self.newOutput.emit(f"Comando ricevuto: {command}")
-
         try:
+            attivo = True
             comrecon(command)  # Esegue comrecon senza aspettare un ritorno
         except Exception as e:
             self.newOutput.emit(messages["error_messages"]["called_process_error"].format(e=e))
 
+    @Slot()  # Slot per chiusura finestre UI
+    def stop_process(self):
+        pid2 = 0
+        QApplication.quit()  # Termina l'applicazione
+        estraipid(pid2)
+        os.kill(pid2, signal.SIGTERM)
+        exit()
+
+    @Slot()
+    # Slot per controllo cambio colore botname nel caso sia attivo
+    def checkColor(self):
+        if not engine.rootObjects():
+          return
+        root_object = engine.rootObjects()[0]
+        testo = root_object.findChild(QObject, "botname")
+
+        if testo:
+            color = "red" if attivo else "white"
+            testo.setProperty("color", color)  # Modifica il colore
+
+    @Slot()
+    def loadWindow(self):
+      global layout
+
+      #imposta layout e scrive su file config.json
+      if layout == "uniwindow":
+        layout = "main"
 
 
+      elif layout == "main":
+        layout = "uniwindow"
 
-def listacomandi():
+      # Leggi il file JSON esistente
+      try:
+        with open(config_path, "r") as file:
+            config = json.load(file)
+      except (FileNotFoundError, json.JSONDecodeError):
+            config = {}  # Se il file non esiste o è vuoto, inizia con un dizionario vuoto
+
+      # Modifica solo il valore della chiave "layout"
+      config["layout"] = layout
+
+      # Scrivere i dati nel file config.json
+      with open(config_path, "w") as file:
+            json.dump(config, file, indent=4)
+
+      if self.window:
+        self.window.deleteLater()  # Chiude la finestra attuale
+        self.window = None
+
+
+      self.restart_application()
+
+    def restart_application(self):
+         # Riavvia l'applicazione tramite subprocess
+         try:
+            subprocess.Popen([sys.executable] + sys.argv)  # Riavvia lo script corrente
+         except Exception as e:
+              print(f"Errore nel riavvio dell'applicazione: {e}")
+
+         # Esci immediatamente, poiché l'applicazione è stata riavviata
+         sys.exit(0)
+
+
+def uniwindow():
+    global engine
+
     app = QApplication(sys.argv)
     engine = QQmlApplicationEngine()
 
-    #aggiunge dati dell'app per il salvataggio'
+    #parametri importanti per salvare il file delle impostazioni
     app.setOrganizationName("TecnoMas")
     app.setOrganizationDomain("tecnomas.engineering.com")
-    app.setApplicationName("listacomandi")
+    app.setApplicationName("uniwindow")
 
-    outputRedirector = OutputRedirector()
-    sys.stdout = outputRedirector  # Reindirizza stdout alla nostra classe
 
-    engine.rootContext().setContextProperty("outputRedirector", outputRedirector)
+    # Leggere il file JSON in Python
+    with open(config_path, "r") as file:
+        config_data = json.load(file)
+
+    # Crea l'istanza di animationManager e passa la finestra principale
+    animationManager = AnimationManager()
+    sys.stdout = animationManager  # Reindirizza stdout alla nostra classe
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("animationManager", animationManager)
+    engine.rootContext().setContextProperty("configData", config_data)
+    engine.quit.connect(app.quit)
+
+    engine.load(main_path / 'ui/uniwindow.qml')
+
+    if not engine.rootObjects():
+       sys.exit(-1)
+
+    app.exec()
+
+
+def animazione():
+    global engine
+
+    app = QApplication(sys.argv)
+    engine = QQmlApplicationEngine()
+
+    #parametri importanti per salvare il file delle impostazioni
+    app.setOrganizationName("TecnoMas")
+    app.setOrganizationDomain("tecnomas.engineering.com")
+    app.setApplicationName("assistente")
+
+
+    # Leggere il file JSON in Python
+    with open(config_path, "r") as file:
+        config_data = json.load(file)
+
+    # Crea l'istanza di animationManager e passa la finestra principale
+    animationManager = AnimationManager()
+    sys.stdout = animationManager  # Reindirizza stdout alla nostra classe
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("animationManager", animationManager)
+    engine.rootContext().setContextProperty("configData", config_data)
+    engine.quit.connect(app.quit)
+
+    engine.load(main_path / 'ui/main.qml')
     engine.load(main_path / 'ui/listcom.qml')
 
     if not engine.rootObjects():
-        sys.exit(-1)
-    print(messages["other_messages"]["waiting_wakeword"].format(botname=botname))
+       sys.exit(-1)
+
     app.exec()
+
 
 
 
 def listen():
     """Ciclo principale di ascolto."""
-    global time_start,parla_sintesi
+    global time_start,parla_sintesi,layout
 
+    if layout == "main":
+        grafica = animazione
+    else:
+        grafica = uniwindow
 
     with sr.Microphone() as source:
        #recognizer.adjust_for_ambient_noise(source, duration=1.0) #crea problemi di sensibilità
-       Thread(target=listacomandi,daemon=True).start() #thread per ui con lista comandi
-       Thread(target=downtime_control_loop, daemon=True).start() #thread loop per controllo stato assistente
+       Thread(target=grafica,daemon=True).start()
+       time.sleep(1)
+       print(messages["other_messages"]["waiting_wakeword"].format(botname=botname))
 
        while True:
             try:
+                #thread  per controllo periodico stato  assistente lasciare in questa posizione evita di dover fare il loop
+                Thread(target=downtime_control, daemon=True).start()
+
                 #Sequenza senza uso di thread
                 audio = recognizer.listen(source,timeout=5)
                 comando = recognizer.recognize_google(audio,language="it-IT,en-US").lower()

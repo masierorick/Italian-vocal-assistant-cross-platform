@@ -1,7 +1,7 @@
 [Desktop Entry]
 Categories=Utility
-Comment[it_IT]=
-Comment=
+Comment[it_IT]= Assistente vocale cross-platform
+Comment= Vocal assistant cross-platform
 Exec=python3 /home/riccardo/.local/lib/python3.12/site-packages/assistente/main.py
 GenericName[it_IT]=Assistente vocale
 GenericName=Assistente vocale

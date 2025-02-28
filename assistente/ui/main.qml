@@ -1,9 +1,6 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
+import QtQuick 6.0
+import QtQuick.Controls 6.0
 import QtCore
-import QtQml 2.15
-import QtQml.Models 2.15
-
 
 ApplicationWindow  {
     id: window
@@ -31,7 +28,6 @@ ApplicationWindow  {
     }
 
 
-
     Timer {
         id: settingsCheckTimer
         interval: 1000 // intervallo in millisecondi (1 secondo)
@@ -39,29 +35,47 @@ ApplicationWindow  {
         repeat: true
         onTriggered: {
             // Avvio processo di controllo se il botname è attivo e relativo cambio di colore
-            processManager.checkColor()
+            animationManager.checkColor()
         }
     }
 
-    AnimatedImage {
-        id: animation
-        anchors.fill: parent
-        source: "breath_round.gif"
-        height: 100; width: 75
-        //fillMode: Image.PreserveAspectFit
-        smooth: false
-        cache: true
+    // Menu contestuale
+    Menu {
+       id: contextMenu
+
+       MenuItem {
+          text: "Layout singolo"
+          onTriggered: animationManager.loadWindow()
+       }
+
 
     }
 
-    Text {
+    Rectangle {
+        id: animazione
+        width: parent.width
+        height: parent.height
+        color: "transparent"
+
+
+        AnimatedImage {
+            id: animation
+            anchors.fill: parent
+            anchors.margins: 10
+            source: "breath_round.gif"
+            //height: 100; width: 75
+            fillMode: Image.PreserveAspectFit
+            smooth: false
+            cache: true
+
+        }
+
+        Text {
             objectName: "botname"
             id:botname
-            x: (110/400)* parent.width
-            width: parent.width/2
-            height: parent.height
             font.family: "Space Age"
             anchors.fill: parent
+            anchors.margins: 15
             font.bold: true
             font.pointSize: 50
             minimumPointSize: 5
@@ -72,14 +86,33 @@ ApplicationWindow  {
             text: nomebot
 
 
-     }
+        }
+
+        Button { // attiva il menu di configurazione
+                    id: configButton
+                    width: 30
+                    height: 30
+                    anchors.top: animazione.top
+                    anchors.right: parent.right
+                    //anchors.margins: 10
+                    icon.source: "settings.png"  // Assicurati che il percorso dell'icona sia corretto
+                    flat: true  // Rende il button senza bordi, se lo desideri
+                    background: Rectangle {
+                        color: "transparent"  // Rende lo sfondo trasparente, se lo desideri
+                    }
 
 
+        }
+
+    }
 
     MouseArea {
       anchors.fill: parent
       acceptedButtons: Qt.LeftButton | Qt.RightButton
       drag.target: parent
+      property int edgeMargin: 10
+      property bool moveMode: false
+
       onWheel: function(wheel) {
                 let delta = wheel.angleDelta.y / 120; // 120 è il valore tipico per una rotazione del mouse wheel
                 window.width += delta * 10; // Cambia la larghezza
@@ -91,25 +124,28 @@ ApplicationWindow  {
                 if (window.height < 75) window.height = 75;
             }
       onPressed: (mouse)=> {
-            if (mouse.button == Qt.LeftButton)
+          var mappedPoint = mapToItem(configButton, mouse.x,mouse.y);
+          if (!moveMode && configButton.contains(mappedPoint)) {
+                if (mouse.button == Qt.LeftButton) {
+                    contextMenu.popup();
+                }
+                else {
+                    mouse.accepted = false;
+                    return;
+                }
+          }
+
+          if (mouse.button == Qt.LeftButton)
                 window.startSystemMove();
             else
              if (mouse.button == Qt.RightButton) {
-                processManager.stop_process()
+                animationManager.stop_process()
                 window.close();
            }
         }
      }
 
 
-     Component.onCompleted: {
-
-         }
-
-
-    Component.onDestruction: {
-
-    }
 
 }
 

@@ -13,6 +13,9 @@ main_path = Path.cwd().parent
 current_dir = os.path.dirname(os.path.abspath(__file__))
 config_path = main_path / "config/config.json"
 
+os.environ["QT_QPA_PLATFORM"] = "xcb"
+
+
 class OutputRedirector(QObject):
     newOutput = Signal(str)
 
@@ -48,7 +51,7 @@ class ProcessManager(QObject):
                         botname_text.setProperty("color", "red" if attivo == "True" else "white")
 
 def run_app():
-    os.environ["QT_QPA_PLATFORM"] = "xcb"
+
 
     with open(config_path, "r") as file:
           config_data = json.load(file)
@@ -56,7 +59,7 @@ def run_app():
     app = QGuiApplication(sys.argv)
     app.setOrganizationName("TecnoMas")
     app.setOrganizationDomain("tecnomas.engineering.com")
-    app.setApplicationName("assistente")
+    app.setApplicationName("uniwindow")
 
     process_manager = ProcessManager()
     outputRedirector = OutputRedirector()
@@ -77,5 +80,5 @@ def run_app():
     app.exec()
 
 if __name__ == "__main__":
-        print(os.path.join(main_path, "script", "status.py"))
+        #print(os.path.join(main_path, "script", "status.py"))
         run_app()

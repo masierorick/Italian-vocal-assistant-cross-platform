@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.0]  -2025-02-27
+- creata versione assistente2 
+- importato codice creazione ui assistente su assistente.py e risoluzione relativi problemi importazione (es. sostituito process con subrpocess.open in alcune funzioni)
+- realizzata interfaccia ui uniwindow che integra ui main.qml con ui listcom.qml
+- possibilità di switchare fra le 2 interfaccie 
+- inserito a ui uniwindow.qml icona impostazioni per modifica layout 
+- aggiunto a ui main.qml icona impostazioni con menù modifica layout 
+
+
+## [2.5.7] -2025-02-27 
+- Eliminato il downtime_control_loop che eseguiva thread continui e spostato il tread downtime_control in altra posizione 
+
 ## [2.5.6] -2025-02-26 
 - Inserito nella lista dei comandi la possibilità di inviare anche messaggi testuali 
 - corretti bug minori su errori 
