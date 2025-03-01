@@ -9,6 +9,9 @@ ApplicationWindow {
     visible: true
     flags: Qt.FramelessWindowHint | Qt.Window
     color: "transparent"
+    minimumWidth: 350
+    minimumHeight: animation.height
+
     property string textColor: "white"
     property string nomebot: configData.botname
 
@@ -216,6 +219,12 @@ ApplicationWindow {
 
 
         onWheel: function(wheel) {
+             let mousePos = mapToItem(flickable, wheel.x, wheel.y);
+             if (mousePos.x >= 0 && mousePos.y >= 0 && mousePos.x < flickable.width && mousePos.y < flickable.height) {
+                    // L'evento è dentro la Flickable, lascia che scorra il testo
+                    return;
+            }
+
             let delta = wheel.angleDelta.y / 120; // 120 è il valore tipico per una rotazione del mouse wheel
             appWindow.width += delta * 10; // Cambia la larghezza
             appWindow.height += delta * 10; // Cambia l'altezza
@@ -262,6 +271,8 @@ ApplicationWindow {
                     return;
                 }
             }
+
+
 
             //gestione ridimensionamento
             if (mouse.button == Qt.LeftButton) {

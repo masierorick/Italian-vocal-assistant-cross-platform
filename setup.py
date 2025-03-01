@@ -43,9 +43,9 @@ install_portaudio()
 
 setup(
     name="Assistente",
-    version="2.5.0",
+    version="3.0",
     author="Masiero Riccardo",
-    author_email="masierorick@gmail.com",
+    author_email="tecnomas.engneering@gmail.com",
     description="assistente vocale in italiano",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
@@ -56,6 +56,7 @@ setup(
       "assistente": [ #Specifica i file extra da includere
               "ui/*.gif",
               "ui/*.qml",
+              "ui/*.png",
               "data/*.*",
               "data/*.csv",
               "script/.env",
