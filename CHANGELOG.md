@@ -1,4 +1,7 @@
 # Changelog
+# [3.0.1] -2025-03-05 
+- unificata la funzione di apertura delle 2 interfaccie su assistente.py 
+- risolto errore apertura interfaccia differente con ritardo su avvio 2 interfaccia 
 
 ## [3.0]  -2025-02-27
 - creata versione assistente2 
