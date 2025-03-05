@@ -41,7 +41,7 @@ import speech_recognition as sr
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import QObject,Slot,Signal
+from PySide6.QtCore import QObject,Slot,Signal,QTimer
 #AI importate
 from groq import Groq
 from openai import OpenAI
@@ -827,8 +827,10 @@ class AnimationManager(QObject):
         self.window.deleteLater()  # Chiude la finestra attuale
         self.window = None
 
+      # Aspetta la fine del ciclo di eventi prima di riavviare l'app
+      QTimer.singleShot(0, self.restart_application)
 
-      self.restart_application()
+      #self.restart_application()
 
     def restart_application(self):
          # Riavvia l'applicazione tramite subprocess
@@ -837,21 +839,21 @@ class AnimationManager(QObject):
          except Exception as e:
               print(f"Errore nel riavvio dell'applicazione: {e}")
 
+         QApplication.exit(0)  # Chiude l'istanza attuale in modo sicuro
          # Esci immediatamente, poiché l'applicazione è stata riavviata
          sys.exit(0)
 
 
-def uniwindow():
+def avvia_interfaccia(app_name, qml_files):
     global engine
 
     app = QApplication(sys.argv)
     engine = QQmlApplicationEngine()
 
-    #parametri importanti per salvare il file delle impostazioni
+    # Parametri importanti per salvare il file delle impostazioni
     app.setOrganizationName("TecnoMas")
     app.setOrganizationDomain("tecnomas.engineering.com")
-    app.setApplicationName("uniwindow")
-
+    app.setApplicationName(app_name)
 
     # Leggere il file JSON in Python
     with open(config_path, "r") as file:
@@ -860,52 +862,25 @@ def uniwindow():
     # Crea l'istanza di animationManager e passa la finestra principale
     animationManager = AnimationManager()
     sys.stdout = animationManager  # Reindirizza stdout alla nostra classe
-    engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("animationManager", animationManager)
     engine.rootContext().setContextProperty("configData", config_data)
     engine.quit.connect(app.quit)
 
-    engine.load(main_path / 'ui/uniwindow.qml')
+    # Carica i file QML specificati
+    for qml_file in qml_files:
+        engine.load(main_path / qml_file)
 
     if not engine.rootObjects():
-       sys.exit(-1)
+        sys.exit(-1)
 
     app.exec()
+
+def uniwindow():
+    avvia_interfaccia("uniwindow", ['ui/uniwindow.qml'])
 
 
 def animazione():
-    global engine
-
-    app = QApplication(sys.argv)
-    engine = QQmlApplicationEngine()
-
-    #parametri importanti per salvare il file delle impostazioni
-    app.setOrganizationName("TecnoMas")
-    app.setOrganizationDomain("tecnomas.engineering.com")
-    app.setApplicationName("assistente")
-
-
-    # Leggere il file JSON in Python
-    with open(config_path, "r") as file:
-        config_data = json.load(file)
-
-    # Crea l'istanza di animationManager e passa la finestra principale
-    animationManager = AnimationManager()
-    sys.stdout = animationManager  # Reindirizza stdout alla nostra classe
-    engine = QQmlApplicationEngine()
-    engine.rootContext().setContextProperty("animationManager", animationManager)
-    engine.rootContext().setContextProperty("configData", config_data)
-    engine.quit.connect(app.quit)
-
-    engine.load(main_path / 'ui/main.qml')
-    engine.load(main_path / 'ui/listcom.qml')
-
-    if not engine.rootObjects():
-       sys.exit(-1)
-
-    app.exec()
-
-
+    avvia_interfaccia("assistente", ['ui/main.qml', 'ui/listcom.qml'])
 
 
 def listen():
