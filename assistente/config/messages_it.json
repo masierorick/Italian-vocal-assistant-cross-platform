@@ -25,7 +25,13 @@
     "filemanager_error": "Errore nell'apertura del gestore file",
     "error_load_qml": "Errore : impossibile caricare il file QML.",
     "error_system": "Sistema operativo non supportato",
-    "error_volume_control": "Errore nella gestione del volume su {system}"
+    "error_volume_control": "Errore nella gestione del volume su {system}",
+    "error_search_youtube": "Errore durante la ricerca su YouTube: {e}",
+    "file_manager_error": "Nessun gestore file trovato",
+    "platform_error": "Piattaforma {piattaforma} non supportata.",
+    "error_object": "Errore: oggetto {testo} non trovato.",
+    "error_window": "Errore: finestra principale non definita.",
+    "error_reboot": "Errore nel riavvio dell'applicazione: {e}"
   },
   "other_messages": {
     "waiting_wakeword" : "In ascolto per l'attivazione di {botname}",
@@ -34,6 +40,7 @@
     "volume_increased": "Volume aumentato del {deltavolume}%.",
     "volume_decreased": "Volume diminuito del {deltavolume}%.",
     "volume_muted": "Il volume è stato azzerato",
+    "volume_set": "Volume impostato a {percent} %",
     "browser_opened": "Il browser è aperto",
     "browser_closed": "Il browser è chiuso",
     "music_player_opened": "Apro la musica con {musicprog}",
@@ -71,7 +78,9 @@
     "program": ["programma"],
     "list": ["lista", "canali", "stazioni"],
     "graphic": ["grafica"],
-    "window": ["finestra", "note", "nota"]
+    "window": ["finestra", "note", "nota"],
+    "internet": ["internet","browser"],
+    "music": ["musica"]
 
   }
 

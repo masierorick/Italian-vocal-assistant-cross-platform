@@ -162,7 +162,6 @@ def cerca_youtube(query, max_risultati=5):
             return []
 
         # Mostra i risultati
-        urls = []
 
         for item in risposta["items"]:
             titolo = item["snippet"]["title"]
@@ -175,7 +174,7 @@ def cerca_youtube(query, max_risultati=5):
         return urls
 
     except Exception as e:
-        print(f"Errore durante la ricerca su YouTube: {e}")
+        print(messages["error_messages"]["error_search_youtube"].format(e=e))
         return []
 
 
@@ -307,9 +306,9 @@ def apri_gestore_file(percorso="."):
                     subprocess.run([fm, percorso], check=True)
                     break
             else:
-                raise RuntimeError("Nessun gestore file trovato.")
+                raise RuntimeError(messages["error_messages"]["file_manager_error"])
         else:
-            raise RuntimeError(f"Piattaforma {sys.platform} non supportata.")
+            raise RuntimeError(messages["error_messages"]["platform_error"].format(piattaforma=sys.platform))
     except Exception as e:
         print(messages["error_messages"]["filemanger_error"])
 
@@ -325,8 +324,8 @@ def adattalingua(comando):
         r"\bcreta\b": "krita",
         r"\bconsole\b": "konsole",
         r"\bcaffeine\b": "kaffeine",
-        r"\bcate\b": "kate"
-
+        r"\bcate\b": "kate",
+        r"\bspegne\b": "spegni"
     }
 
     for errato, corretto in correzioni.items():
@@ -340,14 +339,14 @@ def apriProgrammi(listaprogrammi, comando):
     comando = comandomod
 
     # Caso speciale: apri il browser
-    if "browser" in comando:
+    if any(word in comando for word in messages["objects"]["internet"]):
         # uso thread per evitare overhead e velocizzare l'esecuzione senza complicazioni.
         Thread(target=webbrowser.open, args=('www.google.it', 2), daemon=True).start()
         speak(messages["other_messages"]["browser_opened"])
         return True
 
     # Caso speciale: apri un'app musicale
-    if "musica" in comando:
+    if any(word in comando for word in messages["objects"]["music"]):
 
         musicprog = "clementine"
         try:
@@ -400,12 +399,12 @@ def chiudiProgrammi(listaprogrammi, comando):
 
     trovato = False
 
-    if "browser" in comando:
+    if any(word in comando for word in messages["objects"]["internet"]):
               youtubeopen = False
               os.system("pkill vivaldi-bin")
               speak(messages["other_messages"]["browser_closed"])
               return True
-    if "musica" in comando:
+    if any(word in comando for word in messages["objects"]["music"]):
               os.system("pkill clementine")
               speak(messages["other_messages"]["music_player_closed"])
               return True
@@ -484,7 +483,7 @@ def setVolume(azione):
             if percent is not None:
                 os.system("pactl set-sink-mute @DEFAULT_SINK@ 0")  # Unmute
                 os.system(f"pactl set-sink-volume @DEFAULT_SINK@ {percent}%")
-                print(f"Volume impostato a {percent}%")
+                print(messages["other_messages"]["volume_set"].format(percent=percent))
         elif any(word in azione for word in messages["commands"]["upvol"]):
             os.system("pactl set-sink-mute @DEFAULT_SINK@ 0")  # Unmute
             os.system(f"pactl set-sink-volume @DEFAULT_SINK@ +{deltavolume}%")
@@ -505,7 +504,7 @@ def setVolume(azione):
             if percent is not None:
                 os.system("osascript -e 'set volume output muted false'")  # Unmute
                 os.system(f"osascript -e 'set volume output volume {percent}'")
-                print(f"Volume impostato a {percent}%")
+                print(messages["other_messages"]["volume_set"].format(percent=percent))
         elif any(word in azione for word in messages["commands"]["upvol"]):
             os.system("osascript -e 'set volume output muted false'")  # Unmute
             os.system(f"osascript -e 'set volume output volume (output volume of (get volume settings) + {deltavolume})'")
@@ -530,7 +529,7 @@ def setVolume(azione):
                 if percent is not None:
                     volume.SetMute(0, None)  # Unmute
                     volume.SetMasterVolumeLevelScalar(percent / 100, None)
-                    print(f"Volume impostato a {percent}%")
+                    print(messages["other_messages"]["volume_set"].format(percent=percent))
             elif any(word in azione for word in messages["commands"]["upvol"]):
                 volume.SetMute(0, None)  # Unmute
                 volume.SetMasterVolumeLevelScalar(min(volume.GetMasterVolumeLevelScalar() + deltavolume / 100, 1.0), None)
@@ -669,6 +668,12 @@ def comrecon(comando):
           # Avvia la finestra delle note in un nuovo processo
           subprocess.Popen([sys.executable, "-c", f"from script.assistente import notes; notes({repr(response)})"])
 
+       # ELSE: Tutti i comandi che non corrispondono alle condizioni precedenti
+       #else:
+          # Se nessuna delle condizioni precedenti è soddisfatta, invia la richiesta a AI per risposte generali
+          #response = get_groq_response(comando)
+          # Avvia la finestra delle note in un nuovo processo
+          #subprocess.Popen([sys.executable, "-c", f"from script.assistente import notes; notes({repr(response)})"])
 
     # Routine principale
     if not attivo:
@@ -705,9 +710,9 @@ class ProcessManager(QObject):
             if text_obj:
                 text_obj.setProperty("text", testo)
             else:
-                print("Errore: oggetto 'testo' non trovato in QML.")
+                print(messages["error_messages"]["error_object"].format(testo=testo))
         else:
-            print("Errore: finestra principale non definita.")
+            print(messages["error_messages"]["error_window"])
 
 
 
@@ -837,7 +842,7 @@ class AnimationManager(QObject):
          try:
             subprocess.Popen([sys.executable] + sys.argv)  # Riavvia lo script corrente
          except Exception as e:
-              print(f"Errore nel riavvio dell'applicazione: {e}")
+              print(messages["error_messages"]["error_reboot"].format(e=e))
 
          QApplication.exit(0)  # Chiude l'istanza attuale in modo sicuro
          # Esci immediatamente, poiché l'applicazione è stata riavviata
