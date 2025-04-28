@@ -3,6 +3,7 @@ from setuptools.command.install import install
 import os
 import shutil
 import subprocess
+import sys
 
 class PostInstallCommand(install):
     """Comando personalizzato per installare il file .desktop dopo l'installazione."""
@@ -70,7 +71,7 @@ setup(
         "groq>=0.18.0",
         "openai>=1.61.0",
         "gTTS>=2.5.4",
-        "playsound>=1.3.0",
+        "playsound>=1.2.2",
         "PySide6>=6.8.0.2",
         "PySide6_Addons>=6.8.1",
         "PySide6_Essentials>=6.8.1",

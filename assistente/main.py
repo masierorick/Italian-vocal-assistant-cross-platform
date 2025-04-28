@@ -30,7 +30,8 @@ listaprogrammi = current_dir + "/data/listaprogrammi"
 listabookmarks = current_dir + "/data/bookmarks"
 attivo = False
 
-
+if platform.system() == "Windows":
+  os.environ["QT_QUICK_CONTROLS_STYLE"] = "Material"
 
 
 def get_installed_programs():
@@ -207,7 +208,7 @@ def main():
    #ottenimento bookmarks da vivaldi
    bookmarks = get_browser_bookmarks()
    if bookmarks:
-      with open (listabookmarks, 'w') as file:
+      with open (listabookmarks, 'w', encoding='utf-8') as file:
           for bookmark in bookmarks:
             #print(f"{bookmark.get('name')}: {bookmark.get('url')}")
             file.write(f"{bookmark.get('name')}={bookmark.get('url')}\n")
@@ -218,13 +219,13 @@ def main():
 
    #scrittura nel file stastus.py attivo = false
    with open(current_dir + "/script/status.py", 'w') as f:
-     f.write(f"{"attivo"} = {attivo}\n")
+     f.write(f"\"attivo\" = {attivo}\n")
 
    try:
      (p2 := Process(name='assistente', target=runassistente)).start()
 
      with open(current_dir + "/script/pid.py", 'w') as f:
-       f.write(f"{"pid2"} = {p2.pid}\n")
+       f.write(f"\"pid2\" = {p2.pid}\n")
        f.close()
 
    except (SystemExit, KeyboardInterrupt):

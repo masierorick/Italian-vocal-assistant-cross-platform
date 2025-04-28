@@ -1,7 +1,11 @@
 # Changelog
+# [3.0.2] -2025-04-26
+- inserite correzioni per l'installazione e il funzionamento su windows 11
+
 # [3.0.1] -2025-03-05 
 - unificata la funzione di apertura delle 2 interfaccie su assistente.py 
 - risolto errore apertura interfaccia differente con ritardo su avvio 2 interfaccia 
+- sostituiti gli errori in italiano con la lista corrispondente su messages_it.json
 
 ## [3.0]  -2025-02-27
 - creata versione assistente2 
