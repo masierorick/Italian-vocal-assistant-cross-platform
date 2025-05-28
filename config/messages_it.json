@@ -31,7 +31,9 @@
     "platform_error": "Piattaforma {piattaforma} non supportata.",
     "error_object": "Errore: oggetto {testo} non trovato.",
     "error_window": "Errore: finestra principale non definita.",
-    "error_reboot": "Errore nel riavvio dell'applicazione: {e}"
+    "error_reboot": "Errore nel riavvio dell'applicazione: {e}",
+    "update_error": "Aggiornamento impossibile"
+
   },
   "other_messages": {
     "waiting_wakeword" : "In ascolto per l'attivazione di {botname}",
@@ -56,7 +58,9 @@
     "shutdown_cancelled": "Ok allora lascio attivo il sistema",
     "reboot_executed": "Ok riavvierò il sistema operativo, ciao.",
     "reboot_cancelled": "Va bene, allora non farò nulla",
-    "notes_closed": "Ok chiudo la finestra"
+    "notes_closed": "Ok chiudo la finestra",
+    "update_in_progress": "Ok effettuo l'aggiornamento di sistema",
+    "update_completed": "Aggiornamento completato"
   },
   "commands": {
     "open": ["apri", "aprimi", "metti", "mettimi"],
@@ -67,18 +71,21 @@
     "exit": ["esci", "chiuditi"],
     "search": ["cerca", "cercami"],
     "reply": ["si", "sì", "certo", "certamente"],
-    "getAI": ["cerca", "cercami", "secondo te", "cosa ne pensi", "calcola", "mi dici", "dimmmi" ,"mi cerchi","mi sai dire"],
+    "getAI": ["cerca", "cercami", "secondo te", "cosa ne pensi", "calcola", "mi dici", "dimmmi" ,"mi cerchi","mi sai dire","mi trovi","trovami"],
     "upvol": ["alza", "aumenta"],
     "downvol": ["abbassa","diminusci"],
     "setvol": ["imposta"],
-    "silent": ["silenzia"]
+    "silent": ["silenzia"],
+    "update": ["aggiorna"]
    },
   "objects": {
     "pc": ["pc", "computer", "sistema"],
     "program": ["programma"],
     "list": ["lista", "canali", "stazioni"],
     "graphic": ["grafica"],
-    "window": ["finestra", "note", "nota"]
+    "window": ["finestra", "note", "nota"],
+    "internet": ["internet","browser"],
+    "music": ["musica"]
 
   }
 
