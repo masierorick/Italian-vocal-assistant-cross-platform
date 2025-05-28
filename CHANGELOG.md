@@ -1,4 +1,7 @@
 # Changelog
+# [3.1.0] -2025-05-15
+- Inserito comando aggiornamento sistema cross - platfom 
+
 # [3.0.2] -2025-04-26
 - inserite correzioni per l'installazione e il funzionamento su windows 11
 
