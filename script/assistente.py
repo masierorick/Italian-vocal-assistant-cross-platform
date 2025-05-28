@@ -38,6 +38,7 @@ from gtts import gTTS
 from playsound import playsound
 from dotenv import load_dotenv
 import speech_recognition as sr
+import PySide6
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtWidgets import QApplication
@@ -99,9 +100,20 @@ recognizer.energy_threshold = 180
 #recognizer.dynamic_energy_threshold = 'False'
 recognizer.pause_threshold = 1.2
 
+#Per Windows
 
-# Imposta la variabile di ambiente QT_QPA_PLATFORM
-os.environ["QT_QPA_PLATFORM"] = "xcb"
+if platform.system() == "Windows":
+
+   # Aggiunge manualmente la directory di PySide6 dove ci sono tutte le DLL
+   os.add_dll_directory(PySide6.__path__[0])
+
+   # Imposta anche i percorsi QML
+   os.environ["QML2_IMPORT_PATH"] = os.path.join(PySide6.__path__[0], "qml")
+   os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = os.path.join(PySide6.__path__[0], "plugins", "platforms")
+
+# Imposta la variabile di ambiente QT_QPA_PLATFORM su Linux
+if platform.system() == "Linux":
+  os.environ["QT_QPA_PLATFORM"] = "xcb"
 
 # Configura la chiave API e il servizio
 api_key_youtube = os.getenv("API_KEY_YOUTUBE") #legge api key di youtube dal file .env
@@ -136,6 +148,17 @@ def get_groq_response(text):
     )
     return response.choices[0].message.content
 
+def estrai_url_da_risposta(risposta):
+    # Se è un dizionario, estrai la parte con l'URL
+    if isinstance(risposta, dict):
+        testo = risposta.get("text", "")
+    else:
+        testo = str(risposta)
+
+    # Cerca il primo URL nella risposta
+    match = re.search(r'https?://[^\s]+', testo)
+    return match.group(0) if match else None
+
 
 def cerca_youtube(query, max_risultati=5):
     try:
@@ -162,7 +185,6 @@ def cerca_youtube(query, max_risultati=5):
             return []
 
         # Mostra i risultati
-        urls = []
 
         for item in risposta["items"]:
             titolo = item["snippet"]["title"]
@@ -325,8 +347,11 @@ def adattalingua(comando):
         r"\bcreta\b": "krita",
         r"\bconsole\b": "konsole",
         r"\bcaffeine\b": "kaffeine",
-        r"\bcate\b": "kate"
-
+        r"\bcate\b": "kate",
+        r"\bspegne\b": "spegni",
+        r"\bspenge\b": "spengi",
+        r"\bspinge\b": "spegni",
+        r"\bspingi\b": "spegni"
     }
 
     for errato, corretto in correzioni.items():
@@ -340,14 +365,14 @@ def apriProgrammi(listaprogrammi, comando):
     comando = comandomod
 
     # Caso speciale: apri il browser
-    if "browser" in comando:
+    if any(word in comando for word in messages["objects"]["internet"]):
         # uso thread per evitare overhead e velocizzare l'esecuzione senza complicazioni.
         Thread(target=webbrowser.open, args=('www.google.it', 2), daemon=True).start()
         speak(messages["other_messages"]["browser_opened"])
         return True
 
     # Caso speciale: apri un'app musicale
-    if "musica" in comando:
+    if any(word in comando for word in messages["objects"]["music"]):
 
         musicprog = "clementine"
         try:
@@ -400,12 +425,12 @@ def chiudiProgrammi(listaprogrammi, comando):
 
     trovato = False
 
-    if "browser" in comando:
+    if any(word in comando for word in messages["objects"]["internet"]):
               youtubeopen = False
               os.system("pkill vivaldi-bin")
               speak(messages["other_messages"]["browser_closed"])
               return True
-    if "musica" in comando:
+    if any(word in comando for word in messages["objects"]["music"]):
               os.system("pkill clementine")
               speak(messages["other_messages"]["music_player_closed"])
               return True
@@ -443,7 +468,7 @@ def chiudiProgrammi(listaprogrammi, comando):
 def scrivistatus(): # Funzione per deternimare lo stato attivo dell'assistente vocale
   global attvo
   with open(current_dir + "/status.py", 'w') as f:
-       f.write(f"{"attivo"} = {attivo}\n")
+       f.write(f"\"attivo\" = {attivo}\n")
 
 
 def estraipid(pid2):
@@ -559,10 +584,13 @@ def comrecon(comando):
     listabookmarks = main_path / "data/bookmarks"
     pid1, pid2 = 0, 0
     risposte_comando = messages["commands"]["reply"]
+    sistema = platform.system().lower()
 
     # Normalizzazione del comando
     comando = comando.lower().strip()
 
+    comandomod = adattalingua(comando)  # Funzione per adattare la lingua
+    comando = comandomod
 
     # Scrive lo stato dell'assistente
     scrivistatus()
@@ -572,35 +600,56 @@ def comrecon(comando):
         print(botname + ": " + messaggio)
         speak(messaggio)
 
+    def conferma_uscita(): #resa cross-platform
+     global uscita
 
-    def conferma_uscita():
-         global uscita
+     if any(re.search(pattern, comando, re.IGNORECASE) for pattern in risposte_comando):
+        rispondi_e_parla(messages["other_messages"]["shutdown_executed"])
 
-         if any(re.search(pattern,comando,re.IGNORECASE) for pattern in risposte_comando):
-            rispondi_e_parla(messages["other_messages"]["shutdown_executed"])
+
+        if sistema == "linux":
+            # Spegnimento su Linux
             os.system("shutdown -h now")
-         elif "no" in comando:
-            uscita = False
-            rispondi_e_parla(messages["other_messages"]["shutdown_cancelled"])
+        elif sistema == "windows":
+            # Spegnimento su Windows
+            os.system("shutdown /s /f /t 0")
+        elif sistema == "darwin":  # macOS
+            # Spegnimento su macOS
+            os.system("sudo shutdown -h now")
 
-    def conferma_riavvio():
-         global riavvia
+     elif "no" in comando:
+        uscita = False
+        rispondi_e_parla(messages["other_messages"]["shutdown_cancelled"])
+
+    def conferma_riavvio(): #resa cross-platform
+     global riavvia
+
+     if any(re.search(pattern, comando, re.IGNORECASE) for pattern in risposte_comando):
+        rispondi_e_parla(messages["other_messages"]["reboot_executed"])
 
 
-         if any(re.search(pattern,comando,re.IGNORECASE) for pattern in risposte_comando):
-            rispondi_e_parla(messages["other_messages"]["reboot_executed"])
-            os.system("sudo reboot")
-         elif "no" in comando:
-            rispondi_e_parla(messages["other_messages"]["reboot_cancelled"])
-            riavvia = False
+        if sistema == "linux":
+            # Riavvio su Linux
+            os.system("sudo /sbin/reboot")
+        elif sistema == "windows":
+            # Riavvio su Windows
+            os.system("shutdown /r /f /t 0")
+        elif sistema == "darwin":  # macOS
+            # Riavvio su macOS
+            os.system("sudo shutdown -r now")
+        else:
+            rispondi_e_parla(messages["other_messages"]["reboot_failed"])
+
+     elif "no" in comando:
+        rispondi_e_parla(messages["other_messages"]["reboot_cancelled"])
+        riavvia = False
+
 
 
     def esegui_com(comando):
        global uscita,riavvia
 
        # Funzione per determinare ed eseguire il comando ricevuto con comandi semplificati
-       comandomod = adattalingua(comando)  # Funzione per adattare la lingua
-       comando = comandomod
 
        if not parla_sintesi:
           print(messages["other_messages"]["command"].format(comando=comando))  # Log del comando
@@ -631,7 +680,56 @@ def comrecon(comando):
           if "gestore" in comando and "file" in comando:
             apri_gestore_file(".")
           elif not apriBookmarks(listabookmarks, comando):
-            apriProgrammi(listaprogrammi, comando)
+            if not apriProgrammi(listaprogrammi, comando):
+              # Se non trovato né nei bookmarks né nei programmi, usa Groq
+              response = get_groq_response(comando)
+
+              # Supponiamo che la funzione restituisca una stringa contenente l'URL
+              url = estrai_url_da_rispostaAI(response)  # Dovrai definire questa funzione
+
+              if url:
+                Thread(target=webbrowser.open, args=(url, 2), daemon=True).start()
+                speak("Pagina di " + comando.lower() + " aperta")
+              else:
+                speak("Non ho trovato nulla da aprire.")
+
+       #comando aggiornamento sistema cross-platform
+       if any(word in comando for word in messages["commands"]["update"]) and any(word in comando for word in messages["objects"]["pc"]):
+        rispondi_e_parla(messages["other_messages"]["update_in_progress"])
+        print (sistema)
+        if sistema == "linux":
+            # Rileva l'ambiente desktop su Linux
+            try:
+                ambiente = os.environ.get('XDG_CURRENT_DESKTOP', '').lower()
+                print (ambiente)
+            except Exception:
+                ambiente = ""
+
+            if "kde" in ambiente:
+                # Usa pkcon per gli utenti KDE Plasma
+                os.system("sudo pkcon update -y")
+            elif "gnome" in ambiente or "ubuntu" in ambiente:
+                # Usa apt per Ubuntu o GNOME
+                os.system("sudo apt update && sudo apt upgrade -y")
+            elif "xfce" in ambiente:
+                # Usa pacman o apt per Xfce
+                os.system("sudo pacman -Syu --noconfirm")  # Per Arch Linux
+            else:
+                # Default per altre distribuzioni
+                os.system("sudo apt update && sudo apt upgrade -y")
+
+        elif sistema == "windows":
+            # Aggiorna il sistema su Windows (con winget o choco)
+            try:
+                os.system("winget upgrade --all")
+            except Exception:
+                try:
+                    os.system("choco upgrade all -y")
+                except Exception as e:
+                    print(messages["error_messages"]["update_error"], e)
+
+        rispondi_e_parla(messages["other_messages"]["update_completed"])
+
 
        if any(word in comando for word in messages["commands"]["close"]):
           if any(word in comando for word in messages["objects"]["window"]):
@@ -669,6 +767,12 @@ def comrecon(comando):
           # Avvia la finestra delle note in un nuovo processo
           subprocess.Popen([sys.executable, "-c", f"from script.assistente import notes; notes({repr(response)})"])
 
+       # ELSE: Tutti i comandi che non corrispondono alle condizioni precedenti
+       #else:
+          # Se nessuna delle condizioni precedenti è soddisfatta, invia la richiesta a AI per risposte generali
+          #response = get_groq_response(comando)
+          # Avvia la finestra delle note in un nuovo processo
+          #subprocess.Popen([sys.executable, "-c", f"from script.assistente import notes; notes({repr(response)})"])
 
     # Routine principale
     if not attivo:
